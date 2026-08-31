@@ -261,6 +261,7 @@ does.
 | `pitwall fleet` | Which agent is waiting, working, or done — and `wait` blocks until one needs you |
 | `pitwall burn` | What usage costs, by model, effort level, project, session and day |
 | `pitwall perms` | Which permission rules can never match, and `perms fix` removes them |
+| `pitwall burn top --by branch` | What a feature cost, which no other tool answers |
 | `pitwall recall` | Bring back what a compaction threw away |
 | `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
 
@@ -326,6 +327,15 @@ rate, a 1-hour write 2×, a cache read 0.1×. Claude Code records the TTL split
 per request, and `pitwall` uses it — which matters when 98% of your tokens are
 cache reads. Messages replayed by session forks are counted once. Models with
 promotional launch pricing are billed at the rate that applied on the day.
+
+Three numbers appear here that nothing else reports. **What a session cost
+before anyone typed** — the system prompt, tool definitions, skills, plugins,
+MCP servers and CLAUDE.md all arrive in the first request and are paid for,
+and the counter you see starts afterwards; the median here is 34.1K tokens,
+which matches an independent community measurement of ~34,433. **What a
+compaction cost** in tokens dropped and time waited. And **what a branch cost**,
+via `burn top --by branch`, which is the closest thing on disk to "what did
+this feature cost".
 
 Subagents are counted and shown separately. Their transcripts live in a
 `subagents/` directory, they carry `isSidechain`, and on this machine they are

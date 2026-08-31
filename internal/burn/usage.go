@@ -23,14 +23,18 @@ import (
 
 // Record is token usage for one hour, model, effort level and session.
 type Record struct {
-	Hour     time.Time `json:"hour"`
-	Model    string    `json:"model"`
-	Effort   string    `json:"effort"`
-	Session  string    `json:"session"`
-	Project  string    `json:"project"`
-	Sub      bool      `json:"subagent"`
-	Messages int       `json:"messages"`
-	Usage    Usage     `json:"usage"`
+	Hour    time.Time `json:"hour"`
+	Model   string    `json:"model"`
+	Effort  string    `json:"effort"`
+	Session string    `json:"session"`
+	Project string    `json:"project"`
+	Sub     bool      `json:"subagent"`
+	// Branch is the git branch the work happened on, which is the closest
+	// thing on disk to a unit of work: "what did this feature cost" has no
+	// other answer.
+	Branch   string `json:"branch,omitempty"`
+	Messages int    `json:"messages"`
+	Usage    Usage  `json:"usage"`
 }
 
 // Report is everything a scan found.
@@ -50,6 +54,7 @@ type bucket struct {
 	Model    string `json:"m"`
 	Effort   string `json:"e,omitempty"`
 	Sub      bool   `json:"s,omitempty"`
+	Branch   string `json:"b,omitempty"`
 	Messages int    `json:"n"`
 	In       int64  `json:"i,omitempty"`
 	Out      int64  `json:"o,omitempty"`
@@ -76,6 +81,7 @@ type bucketKey struct {
 	model  string
 	effort string
 	sub    bool
+	branch string
 }
 
 type usageLine struct {
@@ -84,6 +90,7 @@ type usageLine struct {
 	Effort      string `json:"effort"`
 	CWD         string `json:"cwd"`
 	SessionID   string `json:"sessionId"`
+	GitBranch   string `json:"gitBranch"`
 	RequestID   string `json:"requestId"`
 	IsSidechain bool   `json:"isSidechain"`
 	Message     struct {
@@ -219,6 +226,7 @@ func Scan(useCache bool) Report {
 				Session:  agg.Session,
 				Project:  agg.Project,
 				Sub:      b.Sub,
+				Branch:   b.Branch,
 				Messages: b.Messages,
 				Usage: Usage{
 					Input: b.In, Output: b.Out,
@@ -275,7 +283,7 @@ func parse(path string, info os.FileInfo, skip map[uint64]struct{}) fileAgg {
 	}
 
 	for k, b := range buckets {
-		b.Hour, b.Model, b.Effort, b.Sub = k.hour, k.model, k.effort, k.sub
+		b.Hour, b.Model, b.Effort, b.Sub, b.Branch = k.hour, k.model, k.effort, k.sub, k.branch
 		agg.Buckets = append(agg.Buckets, *b)
 	}
 	sort.Slice(agg.Buckets, func(i, j int) bool { return agg.Buckets[i].Hour < agg.Buckets[j].Hour })
@@ -322,7 +330,7 @@ func (agg *fileAgg) absorb(e usageLine, buckets map[bucketKey]*bucket, local, sk
 		w5 = u.CacheCreate // older records carry no TTL split
 	}
 
-	k := bucketKey{hour: hour, model: model, effort: e.Effort, sub: e.IsSidechain}
+	k := bucketKey{hour: hour, model: model, effort: e.Effort, sub: e.IsSidechain, branch: e.GitBranch}
 	b := buckets[k]
 	if b == nil {
 		b = &bucket{}

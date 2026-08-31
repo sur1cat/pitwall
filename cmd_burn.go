@@ -142,6 +142,7 @@ func burnSummary(args []string) error {
 		out["by_model"] = burnGroups(records, func(r burn.Record) string { return r.Model })
 		out["by_effort"] = burnGroups(records, burnEffortOf)
 		out["by_agent"] = burnGroups(records, burnAgentOf)
+		out["by_branch"] = burnGroups(records, burnBranchOf)
 		return emitJSON(out)
 	}
 
@@ -164,6 +165,9 @@ func burnSummary(args []string) error {
 	burnPrintGroup("by model", burnGroups(records, func(r burn.Record) string { return r.Model }), all, 6)
 	burnPrintGroup("by effort", burnGroups(records, burnEffortOf), all, 6)
 	burnPrintGroup("by agent", burnGroups(records, burnAgentOf), all, 2)
+	// Branch is the closest thing on disk to a unit of work. "What did this
+	// feature cost" has no other answer, and no other tool gives one.
+	burnPrintGroup("by branch", burnGroups(records, burnBranchOf), all, 6)
 
 	if all.Usage.CacheRead > 0 {
 		var billed, uncached float64
@@ -186,9 +190,28 @@ func burnSummary(args []string) error {
 	if rep.Duplicates > 0 {
 		fmt.Printf("  %s\n", ui.Gray(fmt.Sprintf("%d replayed messages skipped (session forks and resumes)", rep.Duplicates)))
 	}
+	printStartupNote()
 	printCompactionNote()
 	printRetentionNote(claude.Retain())
 	return nil
+}
+
+// printStartupNote reports what a session costs before anyone types. The
+// system prompt, the tool definitions, the skills, plugins, MCP servers and
+// the project's CLAUDE.md all arrive in the first request and are paid for,
+// and the counter a person sees starts after them.
+func printStartupNote() {
+	starts := claude.Startups()
+	if len(starts) < 5 {
+		return
+	}
+	median := claude.MedianStartup(starts)
+	fmt.Printf("  %s %d sessions opened at a median of %s before the first prompt\n",
+		ui.Yellow("startup:"), len(starts), tokens(median))
+	if worst := starts[0]; worst.Tokens > median*2 {
+		fmt.Printf("           %s\n", ui.Gray(fmt.Sprintf(
+			"the heaviest opened at %s in %s", tokens(worst.Tokens), worst.Project)))
+	}
 }
 
 // printCompactionNote reports what summarising the conversation has cost. It
@@ -262,6 +285,17 @@ func burnAgentOf(r burn.Record) string {
 	return "main agent"
 }
 
+// burnBranchOf groups by the branch the work happened on. Sessions run on the
+// main branch constantly, so it is excluded: it would swamp the list and say
+// nothing, whereas a feature branch is a question someone actually asks.
+func burnBranchOf(r burn.Record) string {
+	switch r.Branch {
+	case "", "main", "master", "develop", "dev", "HEAD":
+		return ""
+	}
+	return r.Project + "@" + r.Branch
+}
+
 func burnEffortOf(r burn.Record) string {
 	if r.Effort == "" {
 		return "(unset)"
@@ -273,6 +307,9 @@ func burnGroups(records []burn.Record, key func(burn.Record) string) map[string]
 	out := map[string]burnTotal{}
 	for _, r := range records {
 		k := key(r)
+		if k == "" {
+			continue // the grouping does not apply to this record
+		}
 		t := out[k]
 		t.Usage.Add(r.Usage)
 		t.Messages += r.Messages
@@ -339,6 +376,8 @@ func burnTop(args []string) error {
 		key = func(r burn.Record) string { return r.Model }
 	case "effort":
 		key = burnEffortOf
+	case "branch":
+		key = burnBranchOf
 	case "day":
 		key = func(r burn.Record) string { return r.Hour.Local().Format("2006-01-02") }
 	default:

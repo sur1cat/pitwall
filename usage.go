@@ -18,7 +18,7 @@ const burnUsage = `pitwall burn — what your usage costs, and which knob spends
 
 Usage:
   pitwall burn [summary]   spend by window, model and effort level
-  pitwall burn top         heaviest project | session | model | effort | day
+  pitwall burn top         heaviest project | session | branch | model | effort | day
   pitwall burn watch       the same summary on an interval
   pitwall burn export      raw hourly records as CSV or JSON
   pitwall burn models      the pricing table in use

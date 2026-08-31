@@ -50,9 +50,18 @@ func cmdHUD(args []string) error {
 	var totals worktree.Totals
 	var reclaim int64
 	var stranded int
+	var clashes []worktree.RepoCollisions
 	if !noTree {
 		if res, err := worktree.Run(worktree.Options{}); err == nil {
 			totals = worktree.Summarize(res.Repos)
+			// Two branches editing the same file will collide when both land,
+			// and nothing says so until the merge. The scan already knows;
+			// asking it was the only missing part.
+			for _, repo := range res.Repos {
+				if c := worktree.Collisions(repo); c.Any() {
+					clashes = append(clashes, c)
+				}
+			}
 			for _, repo := range res.Repos {
 				for _, wt := range repo.Worktrees {
 					if wt.State.Removable() {
@@ -81,6 +90,9 @@ func cmdHUD(args []string) error {
 			out["worktrees"] = totals
 			out["stranded"] = stranded
 			out["reclaim_bytes"] = reclaim
+			if len(clashes) > 0 {
+				out["collisions"] = clashes
+			}
 		}
 		if quotaErr == nil || !quotaReading.FetchedAt.IsZero() {
 			out["quota"] = quotaReading
@@ -137,6 +149,20 @@ func cmdHUD(args []string) error {
 	if sub := todaySub.Dollars(); sub > 0 && today.Dollars() > 0 {
 		fmt.Printf("          %s\n", ui.Gray(fmt.Sprintf(
 			"%s of that went to subagents (%.0f%%)", money(sub), sub/today.Dollars()*100)))
+	}
+
+	if len(clashes) > 0 {
+		var files, migrations int
+		for _, c := range clashes {
+			files += len(c.Overlaps)
+			migrations += len(c.Migrations)
+		}
+		line := fmt.Sprintf("%d branch pair(s) edit the same files", files)
+		if migrations > 0 {
+			line += fmt.Sprintf(", %d migration clash(es)", migrations)
+		}
+		fmt.Printf("  %s %s %s\n", ui.Gray("clash  "), ui.Yellow(line),
+			ui.Gray("· pitwall tree collisions"))
 	}
 
 	if !noTree && totals.Worktrees > 0 {
