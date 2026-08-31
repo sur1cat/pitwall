@@ -10,8 +10,8 @@ import (
 
 	"github.com/sur1cat/pitwall/internal/claude"
 	"github.com/sur1cat/pitwall/internal/coach"
-	"github.com/sur1cat/pitwall/internal/perms"
 	"github.com/sur1cat/pitwall/internal/ui"
+	"github.com/sur1cat/pitwall/perms"
 )
 
 // cmdPerms routes the permission subcommands.

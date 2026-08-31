@@ -1,7 +1,11 @@
-// Package perms reads Claude Code permission rules and reports the ones that
-// cannot do what their author intended: rules that can never match, rules the
-// loader silently ignores, rules a broader rule already covers, and rules that
-// carry a secret in their text.
+// Package perms reads Claude Code permission rules, reports the ones that
+// cannot do what their author intended, and answers whether a given command is
+// covered by them.
+//
+// It is public rather than internal because two products depend on it: pitwall
+// audits a ruleset with it, and steward enforces one with it. They must agree —
+// an audit that says a rule is dead while the enforcer still honours it is
+// worse than either tool alone — so there is one matcher and both import it.
 //
 // The matching rules implemented here follow Claude Code's documented
 // behaviour. They are deliberately conservative: where the documentation is
