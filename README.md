@@ -261,6 +261,7 @@ does.
 | `pitwall fleet` | Which agent is waiting, working, or done — and `wait` blocks until one needs you |
 | `pitwall burn` | What usage costs, by model, effort level, project, session and day |
 | `pitwall perms` | Which permission rules can never match, and `perms fix` removes them |
+| `pitwall recall` | Bring back what a compaction threw away |
 | `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
 
 The context reading is derived from each session's newest message — input plus
@@ -382,6 +383,38 @@ changing it, and it never touches managed settings. Two limits are deliberate:
 
 Everything else in the file survives byte for byte, in its original key order,
 so the diff you review is the change and nothing else.
+
+### recall — what the compaction threw away
+
+When Claude Code summarises a conversation to fit, the detail is gone from the
+model and there is no way to ask what it was. This is the most-repeated
+complaint about the tool, and the usual phrasing is "hours of context, no
+warning, no way to get it back".
+
+The second half of that is not true. The boundary record lists exactly which
+message UUIDs survived, so everything written before it that is not on that
+list is recoverable by **subtraction, not inference** — it never left the disk,
+only the model's context.
+
+```
+$ pitwall recall
+37 compactions dropped 41.5M and waited 1h26m
+
+  when          project   dropped  waited  session
+  Aug 31 09:04  starts    983.2K   3m03s   8e0d2771
+  Aug 18 05:19  fleety    3.0M     2m59s   bcb957a6
+
+$ pitwall recall worktree
+141 discarded messages mention "worktree"
+
+$ pitwall recall --session 8e0d2771 --out recovered.md
+wrote 342 messages, recovered.md
+  pull it back into a session with @recovered.md
+```
+
+The file is the point. Injecting context through a hook would be cleverer and
+would fail silently when it went wrong; a markdown file you pull back with `@`
+works in any session, needs nothing installed, and you can read it first.
 
 ### tree — the worktrees left behind
 

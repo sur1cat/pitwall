@@ -15,6 +15,17 @@ struct Finding: Decodable, Equatable, Identifiable {
     let detail: [String]?
     let action: String?
     let correlated: Bool
+    /// The remedy, when there is one that can be carried out. Present only for
+    /// findings whose fix is a thing pitwall can do; the rest are advice.
+    let act: FindingAct?
+}
+
+/// FindingAct is a remedy the panel can run, so a finding is not a dead end.
+struct FindingAct: Decodable, Equatable {
+    let kind: String
+    let target: String?
+    let value: String?
+    let label: String
 }
 
 struct ProjectStat: Decodable, Equatable, Identifiable {
@@ -62,6 +73,36 @@ final class CoachLoader: ObservableObject {
     @Published private(set) var report: CoachReport?
     @Published private(set) var loading = false
     @Published private(set) var error: String?
+    @Published private(set) var applying = false
+
+    /// apply carries out a finding's remedy. Each one shells out to the same
+    /// command the finding names in its text, so what the button does and what
+    /// the text says can never drift apart.
+    func apply(_ act: FindingAct) {
+        guard !applying else { return }
+        applying = true
+        error = nil
+        let bin = pitwallBinary
+        let args: [String]
+        switch act.kind {
+        case "primer":
+            guard let target = act.target, !target.isEmpty else { applying = false; return }
+            args = ["primer", target, "--write"]
+        case "effort-apply":
+            args = ["effort", "--apply"]
+        default:
+            applying = false
+            return
+        }
+        Task.detached(priority: .userInitiated) {
+            let err = runQuietly(bin, args)
+            await MainActor.run {
+                self.applying = false
+                if let err { self.error = err }
+                self.reload()
+            }
+        }
+    }
 
     func loadIfNeeded() {
         guard report == nil, !loading else { return }
@@ -109,4 +150,26 @@ func runCoach(_ path: String) -> Result<CoachReport, LoadError> {
     } catch {
         return .failure(LoadError(message: "could not read the report: \(error.localizedDescription)"))
     }
+}
+
+
+/// runQuietly executes a command for its effect and returns an error message
+/// when it fails. The output is not parsed: what matters is whether it worked.
+func runQuietly(_ path: String, _ args: [String]) -> String? {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: path)
+    process.arguments = args
+    let err = Pipe()
+    process.standardOutput = Pipe()
+    process.standardError = err
+    do {
+        try process.run()
+    } catch {
+        return "cannot run \(path)"
+    }
+    let data = err.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    if process.terminationStatus == 0 { return nil }
+    let msg = String(data: data, encoding: .utf8) ?? "exit \(process.terminationStatus)"
+    return msg.trimmingCharacters(in: .whitespacesAndNewlines)
 }

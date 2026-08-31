@@ -11,6 +11,7 @@ func TestEveryValueFlagIsHoistable(t *testing.T) {
 		"burn":   {"since", "project", "limit"},
 		"coach":  {"since", "project"},
 		"perms":  {"category", "project", "n"},
+		"recall": {"out", "session", "project", "n"},
 		"tree":   {"path"},
 		"fleet":  {"n"},
 		"primer": {"path"},

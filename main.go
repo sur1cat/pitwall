@@ -35,6 +35,7 @@ Usage:
   pitwall statusline     one line for Claude Code's statusLine hook
   pitwall install        wire pitwall into Claude Code's settings
   pitwall hook EVENT     answer a Claude Code hook (used by the plugin)
+  pitwall recall         bring back what a compaction threw away          (recall --help)
   pitwall doctor         what pitwall can and cannot read on this machine
   pitwall version        print the version
 
@@ -77,6 +78,8 @@ func dispatch(args []string) error {
 		return cmdPerms(args)
 	case "doctor":
 		return cmdDoctor(args)
+	case "recall":
+		return cmdRecall(args)
 	case "quota":
 		return cmdQuota(args)
 	case "statusline":
@@ -202,7 +205,8 @@ func hoistFlags(args []string) []string {
 func flagTakesValue(name string) bool {
 	switch name {
 	case "path", "p", "since", "project", "limit", "for", "timeout", "interval", "n",
-		"by", "format", "exec", "set", "clear", "floor", "threshold", "category":
+		"by", "format", "exec", "set", "clear", "floor", "threshold", "category",
+		"session", "out":
 		return true
 	}
 	return false

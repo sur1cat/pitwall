@@ -414,11 +414,14 @@ struct CoachTab: View {
                         VStack(spacing: 3) {
                             ForEach(r.findings) { finding in
                                 LeakRow(finding: finding, total: r.spend,
-                                        expanded: expanded == finding.id) {
-                                    withAnimation(.easeInOut(duration: 0.12)) {
-                                        expanded = expanded == finding.id ? nil : finding.id
-                                    }
-                                }
+                                        expanded: expanded == finding.id,
+                                        toggle: {
+                                            withAnimation(.easeInOut(duration: 0.12)) {
+                                                expanded = expanded == finding.id ? nil : finding.id
+                                            }
+                                        },
+                                        runAct: { coach.apply($0) },
+                                        busy: coach.applying)
                             }
                         }
                     }
@@ -484,6 +487,8 @@ struct LeakRow: View {
     let total: Double
     let expanded: Bool
     let toggle: () -> Void
+    var runAct: ((FindingAct) -> Void)? = nil
+    var busy: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -523,6 +528,16 @@ struct LeakRow: View {
                     if let action = finding.action, !action.isEmpty {
                         Text(action).font(.system(size: 10)).foregroundStyle(.green)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    // The remedy sits next to the finding. Without this the
+                    // Coach tab is the one place in the panel where reading
+                    // something leads nowhere: you have to remember it, switch
+                    // tabs and do it yourself, which is why nobody does.
+                    if let act = finding.act, let run = runAct {
+                        Button(act.label) { run(act) }
+                            .buttonStyle(.bordered).controlSize(.small)
+                            .disabled(busy)
+                            .padding(.top, 2)
                     }
                 }
                 .padding(.leading, 12).padding(.bottom, 4)

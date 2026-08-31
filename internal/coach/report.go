@@ -59,6 +59,25 @@ type Finding struct {
 	// Correlated marks a finding that is a strong association rather than a
 	// controlled measurement.
 	Correlated bool `json:"correlated"`
+
+	// Act is the remedy, in a form something can carry out. Without it a
+	// finding is a dead end: you read what is wrong, then have to remember it,
+	// go somewhere else, and do the thing yourself — which is why the two
+	// tools that require exactly that go unused.
+	Act *Act `json:"act,omitempty"`
+}
+
+// Act names a remedy and what to apply it to.
+type Act struct {
+	// Kind is what to do: "primer" writes a CLAUDE.md, "effort" changes a
+	// project's default level.
+	Kind string `json:"kind"`
+	// Target is the project the remedy applies to, when it applies to one.
+	Target string `json:"target,omitempty"`
+	// Value carries the argument a remedy needs, such as an effort level.
+	Value string `json:"value,omitempty"`
+	// Label is how to describe the remedy on a button.
+	Label string `json:"label"`
 }
 
 // Report is everything the coach concluded.
@@ -201,7 +220,9 @@ func coldStart(r Report, sessions map[string][]*Exchange) Finding {
 		}
 	}
 	if len(worst) > 0 {
-		f.Action = "pitwall primer " + firstWord(worst[0]) + "   — drafts a CLAUDE.md from what past sessions already discovered"
+		target := firstWord(worst[0])
+		f.Action = "pitwall primer " + target + "   — drafts a CLAUDE.md from what past sessions already discovered"
+		f.Act = &Act{Kind: "primer", Target: target, Label: "Write a primer for " + target}
 		f.Detail = append(f.Detail, "worst offenders: "+join(worst))
 	}
 	return f
@@ -315,6 +336,10 @@ func effortValue(r Report, ex []*Exchange) Finding {
 			money(gap), money(saving), best.name, best.n),
 		"tasks are not identical across levels, so treat this as a hypothesis to test, not a verdict")
 	f.Action = fmt.Sprintf("run a week at %s and compare — pitwall records the answer either way", best.name)
+	// The remedy is the per-project suggestion pitwall already computes from
+	// this same data, not a blanket level: projects differ, and the finding is
+	// a hypothesis about the mix rather than a verdict on any one of them.
+	f.Act = &Act{Kind: "effort-apply", Label: "Apply the suggested level to every project"}
 	return f
 }
 

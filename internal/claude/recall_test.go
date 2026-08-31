@@ -1,0 +1,59 @@
+package claude
+
+import (
+	"path/filepath"
+	"testing"
+)
+
+func TestDroppedFromIsSubtractionNotInference(t *testing.T) {
+	dir := t.TempDir()
+	p := writeSubTranscript(t, dir, "s.jsonl",
+		`{"uuid":"m1","type":"user","message":{"role":"user","content":"the first thing"}}`,
+		`{"uuid":"m2","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"kept reply"}]}}`,
+		`{"uuid":"m3","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"lost reply"},{"type":"tool_use","name":"Bash"}]}}`,
+		`{"uuid":"b1","type":"system","subtype":"compact_boundary","compactMetadata":{"preservedMessages":{"uuids":["m2"]}}}`,
+		`{"uuid":"m4","type":"user","message":{"role":"user","content":"after the boundary"}}`)
+
+	got := DroppedFrom(p, "b1")
+	if len(got) != 2 {
+		t.Fatalf("got %d dropped messages, want 2: %+v", len(got), got)
+	}
+	// m2 survived and m4 came later; neither was dropped.
+	for _, d := range got {
+		if d.UUID == "m2" || d.UUID == "m4" {
+			t.Errorf("%s was not dropped", d.UUID)
+		}
+	}
+	if got[0].Text != "the first thing" {
+		t.Errorf("plain string content should be read, got %q", got[0].Text)
+	}
+	if got[1].Text != "lost reply" || len(got[1].Tools) != 1 || got[1].Tools[0] != "Bash" {
+		t.Errorf("block content should yield text and tool names, got %+v", got[1])
+	}
+}
+
+func TestDroppedFromStopsAtTheBoundary(t *testing.T) {
+	dir := t.TempDir()
+	// Two compactions in one transcript: asking about the first must not
+	// return messages that belong to the span after it.
+	p := writeSubTranscript(t, dir, "two.jsonl",
+		`{"uuid":"a","type":"user","message":{"role":"user","content":"before first"}}`,
+		`{"uuid":"b1","type":"system","subtype":"compact_boundary","compactMetadata":{"preservedMessages":{"uuids":[]}}}`,
+		`{"uuid":"b","type":"user","message":{"role":"user","content":"between"}}`,
+		`{"uuid":"b2","type":"system","subtype":"compact_boundary","compactMetadata":{"preservedMessages":{"uuids":[]}}}`)
+
+	first := DroppedFrom(p, "b1")
+	if len(first) != 1 || first[0].Text != "before first" {
+		t.Errorf("the first boundary should only see what came before it, got %+v", first)
+	}
+	second := DroppedFrom(p, "b2")
+	if len(second) != 2 {
+		t.Errorf("the second boundary sees everything before it, got %d", len(second))
+	}
+}
+
+func TestDroppedFromHandlesAMissingFile(t *testing.T) {
+	if got := DroppedFrom(filepath.Join(t.TempDir(), "gone.jsonl"), "x"); got != nil {
+		t.Errorf("a missing transcript yields nothing, got %v", got)
+	}
+}

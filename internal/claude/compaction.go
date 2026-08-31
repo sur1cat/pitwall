@@ -26,6 +26,11 @@ type Compaction struct {
 	Stall time.Duration
 	// Trigger is what caused it — the automatic threshold or a manual /compact.
 	Trigger string
+	// UUID identifies the boundary record, which is what is needed to work out
+	// what the compaction discarded.
+	UUID string
+	// Path is the transcript the event lives in.
+	Path string
 }
 
 // Compactions reads every compaction recorded in the retained transcripts.
@@ -68,6 +73,7 @@ func compactionsIn(path string) []Compaction {
 		}
 		var rec struct {
 			Timestamp string `json:"timestamp"`
+			UUID      string `json:"uuid"`
 			Subtype   string `json:"subtype"`
 			Meta      struct {
 				PreTokens               int64  `json:"preTokens"`
@@ -97,6 +103,7 @@ func compactionsIn(path string) []Compaction {
 			At: at, Session: session, Project: project,
 			Dropped: dropped, Before: m.PreTokens, After: m.PostTokens,
 			Stall: time.Duration(m.DurationMs) * time.Millisecond, Trigger: trigger,
+			UUID: rec.UUID, Path: path,
 		})
 	}
 	return out
