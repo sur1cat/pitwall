@@ -1,0 +1,77 @@
+version: 2
+project_name: pitwall
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pitwall
+    main: .
+    binary: pitwall
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    goos:   [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude: ['^docs:', '^test:', '^chore:']
+
+release:
+  draft: false
+  prerelease: auto
+
+# Publishes the formula to github.com/sur1cat/homebrew-tap on every tag, with
+# the archive URLs and checksums filled in from the release that was just cut.
+# The tap is the realistic route: homebrew-core requires a level of notability
+# a new project does not have, and a tap needs nobody's approval.
+brews:
+  - name: pitwall
+    repository:
+      owner: sur1cat
+      name: homebrew-tap
+      branch: main
+      # A token with contents:write on the tap repo. The default GITHUB_TOKEN
+      # cannot push to another repository.
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/sur1cat/pitwall"
+    description: "The instrument panel for a fleet of coding agents"
+    license: MIT
+    commit_author:
+      name: goreleaser
+      email: noreply@github.com
+    commit_msg_template: "pitwall {{ .Tag }}"
+    # pitwall shells out to git for the worktree commands and reads
+    # ~/.claude directly; nothing else is required at runtime.
+    dependencies:
+      - name: git
+        type: optional
+    test: |
+      assert_match "pitwall", shell_output("#{bin}/pitwall version")
+    caveats: |
+      pitwall reads what Claude Code already wrote to disk. Start with:
+
+        pitwall            one screen: who is working, what today cost
+        pitwall perms      which permission rules can never match
+        pitwall install    add a status line to Claude Code
+
+      The macOS menu bar app is not installed by this formula. Build it with:
+
+        git clone https://github.com/sur1cat/pitwall && cd pitwall/bar && ./build.sh

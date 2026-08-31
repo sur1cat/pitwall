@@ -1,0 +1,38 @@
+{
+  "description": "Give a session opening in an unprimed repository the layout earlier sessions already discovered, and tell the agent what a prompt leaves unstated.",
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v pitwall >/dev/null 2>&1 && pitwall hook WorktreeCreate || echo '{}'",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v pitwall >/dev/null 2>&1 && pitwall hook UserPromptSubmit || echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v pitwall >/dev/null 2>&1 && pitwall hook SessionStart || echo '{}'",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

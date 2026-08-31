@@ -1,0 +1,14 @@
+{
+  "name": "pitwall",
+  "owner": { "name": "sur1cat", "url": "https://github.com/sur1cat" },
+  "description": "Instrument panel for a fleet of coding agents.",
+  "plugins": [
+    {
+      "name": "pitwall",
+      "description": "Spend, effort, waiting agents, leftover worktrees, and a project primer for repositories with no CLAUDE.md.",
+      "category": "productivity",
+      "author": { "name": "sur1cat" },
+      "source": { "source": "git-subdir", "url": "https://github.com/sur1cat/pitwall.git", "path": "plugin" }
+    }
+  ]
+}

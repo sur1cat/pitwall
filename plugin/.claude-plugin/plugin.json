@@ -1,0 +1,11 @@
+{
+  "name": "pitwall",
+  "displayName": "pitwall",
+  "description": "Instrument panel for a fleet of coding agents: spend, effort, waiting agents, leftover worktrees — plus a project primer for repositories that have no CLAUDE.md.",
+  "version": "0.1.0",
+  "author": { "name": "sur1cat", "url": "https://github.com/sur1cat" },
+  "homepage": "https://github.com/sur1cat/pitwall",
+  "repository": "https://github.com/sur1cat/pitwall",
+  "license": "MIT",
+  "keywords": ["cost", "usage", "effort", "worktree", "fleet", "observability"]
+}
