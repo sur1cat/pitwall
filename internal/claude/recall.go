@@ -15,6 +15,10 @@ type Dropped struct {
 	At    time.Time
 	Text  string
 	Tools []string
+	// Typed marks prose the human wrote, as opposed to the agent's output or a
+	// tool result arriving under the user role. A compaction keeps almost none
+	// of it, which is why it feels like the agent forgot what was asked.
+	Typed bool
 }
 
 // DroppedFrom returns the messages a compaction discarded, in the order they
@@ -80,9 +84,37 @@ func DroppedFrom(path string, boundaryUUID string) []Dropped {
 		if role == "" {
 			role = r.Type
 		}
-		out = append(out, Dropped{UUID: r.UUID, Role: role, At: r.Timestamp, Text: text, Tools: tools})
+		typed := r.Message.Role == "user" && isTyped(text)
+		out = append(out, Dropped{UUID: r.UUID, Role: role, At: r.Timestamp,
+			Text: text, Tools: tools, Typed: typed})
 	}
 	return out
+}
+
+// machinePrefixes open a message that arrived under the user role without a
+// person writing it: a slash command and its output, an injected reminder, the
+// caveat Claude Code prepends to command output. Counting these as prose would
+// bury the handful of real prompts a compaction discarded among dozens of
+// them, which is the opposite of the point.
+var machinePrefixes = []string{
+	"<local-command", "<command-name>", "<command-message>", "<command-args>",
+	"<system-reminder>", "<user-prompt-submit-hook>", "Caveat:",
+	"[Request interrupted", "<bash-input>", "<bash-stdout>",
+	"Base directory for this skill", "<ide_", "<attachment", "# ",
+}
+
+// isTyped reports whether a user-role message is something a person wrote.
+func isTyped(text string) bool {
+	t := strings.TrimSpace(text)
+	if t == "" {
+		return false
+	}
+	for _, p := range machinePrefixes {
+		if strings.HasPrefix(t, p) {
+			return false
+		}
+	}
+	return true
 }
 
 // readContent pulls the readable text and the tool names out of a message,

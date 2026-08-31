@@ -412,9 +412,24 @@ wrote 342 messages, recovered.md
   pull it back into a session with @recovered.md
 ```
 
+`--mine` narrows it to the prompts you typed, and that flag exists because of a
+measurement. Across 37 compactions here, 302 records were preserved verbatim
+and **three of them were prose a human had written**. Everything else kept was
+the agent's own output and tool results. What a compaction reliably discards is
+precisely what you asked for, which is why it feels like the agent forgot the
+task rather than the details.
+
 The file is the point. Injecting context through a hook would be cleverer and
 would fail silently when it went wrong; a markdown file you pull back with `@`
 works in any session, needs nothing installed, and you can read it first.
+
+Two things worth knowing before reaching for a cleverer fix. A `PreCompact`
+hook *can* stop a compaction by exiting 2 — and that is cancellation, not
+postponement: it never resumes, so you trade a summarised conversation for a
+hard context wall. And the automatic trigger is not a mystery: across the
+automatic compactions measured here it fired at a median of 1,000,333 tokens
+with 1.7% spread, essentially exactly at the window. That is why a warning at
+85% gives real notice rather than a guess.
 
 ### tree — the worktrees left behind
 
