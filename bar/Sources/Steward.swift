@@ -44,10 +44,12 @@ struct StewardStatus: Decodable, Equatable {
     enum CodingKeys: String, CodingKey {
         case installed, settings, counts, total, recent
         case autoAllow = "auto_allow"
+        case guardWrites = "guard_bash_writes"
     }
     let installed: Bool
     let settings: String
     let autoAllow: Bool
+    let guardWrites: Bool
     let counts: [String: Int]
     let total: Int
     let recent: [StewardDecision]?
@@ -57,6 +59,7 @@ struct StewardStatus: Decodable, Equatable {
         installed = (try? c.decode(Bool.self, forKey: .installed)) ?? false
         settings = (try? c.decode(String.self, forKey: .settings)) ?? ""
         autoAllow = (try? c.decode(Bool.self, forKey: .autoAllow)) ?? false
+        guardWrites = (try? c.decode(Bool.self, forKey: .guardWrites)) ?? false
         counts = (try? c.decode([String: Int].self, forKey: .counts)) ?? [:]
         total = (try? c.decode(Int.self, forKey: .total)) ?? 0
         recent = try? c.decode([StewardDecision].self, forKey: .recent)
@@ -85,6 +88,10 @@ final class StewardLoader: ObservableObject {
 
     func setAutoAllow(_ on: Bool) {
         run(["install", on ? "--auto-allow" : "--no-auto-allow"])
+    }
+
+    func setGuardWrites(_ on: Bool) {
+        run(["install", on ? "--guard-writes" : "--no-guard-writes"])
     }
 
     private func run(_ args: [String]) {
@@ -211,6 +218,23 @@ struct StewardSection: View {
                     Text(lang == .ru
                          ? "Одобрять вызов, который твои правила уже покрывают. Запрет отменить нельзя, составная команда одобряется только целиком."
                          : "Approve a call your own rules already cover. It cannot override a deny rule, and a compound command is approved only if every part is covered.")
+                        .font(.system(size: 10)).foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .toggleStyle(.switch).controlSize(.small)
+            .disabled(steward.working || !s.installed)
+
+            Toggle(isOn: Binding(
+                get: { s.guardWrites },
+                set: { steward.setGuardWrites($0) }
+            )) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(lang == .ru ? "Спрашивать про прямую запись файлов" : "Ask before Bash writes a file")
+                        .font(.system(size: 12))
+                    Text(lang == .ru
+                         ? "sed -i, перенаправление, tee. Такая запись невидима для /rewind и не попадает в кэш чтения."
+                         : "sed -i, redirects, tee. Such a write is invisible to /rewind and never enters the Read cache.")
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

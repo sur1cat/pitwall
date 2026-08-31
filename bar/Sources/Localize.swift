@@ -42,6 +42,8 @@ private let ru: [String: String] = [
     "None running": "Никто не запущен",
     "Spent today": "Потрачено сегодня",
     "Rules": "Права",
+    "Insights": "Разбор",
+    "Habits": "Привычки",
     "7 days": "7 дней",
     "Reading your settings files…": "Читаю файлы настроек…",
     "What is wrong": "Что не так",

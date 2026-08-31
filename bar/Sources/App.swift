@@ -37,16 +37,14 @@ struct PitwallBarApp: App {
 }
 
 enum Tab: String, CaseIterable, Identifiable {
-    case status, coach, perms, projects, prompts, settings
+    case status, perms, insights, settings
     var id: String { rawValue }
     func title(_ lang: Lang) -> String { L(rawTitle, lang) }
     var rawTitle: String {
         switch self {
         case .status: return "Status"
-        case .coach: return "Coach"
         case .perms: return "Rules"
-        case .projects: return "Projects"
-        case .prompts: return "Prompts"
+        case .insights: return "Insights"
         case .settings: return "Setup"
         }
     }
@@ -64,6 +62,7 @@ struct PanelView: View {
     @Binding var notifications: Bool
     @Binding var language: String
     @State private var tab: Tab = .status
+    @State private var insights: InsightsSection = .habits
     @Environment(\.uiLanguage) private var lang
 
     /// The scrolling area grows with its content between a floor and the
@@ -89,10 +88,8 @@ struct PanelView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     switch tab {
                     case .status:   StatusTab(loader: loader, quota: quota, cleaner: cleaner)
-                    case .coach:    CoachTab(coach: coach)
                     case .perms:    PermsTab(perms: perms, steward: steward)
-                    case .projects: ProjectsTab(effort: effort)
-                    case .prompts:  PromptsTab()
+                    case .insights: InsightsTab(coach: coach, effort: effort, section: $insights)
                     case .settings: SettingsTab(selected: $selected,
                                                 notifications: $notifications,
                                                 language: $language,
@@ -107,9 +104,11 @@ struct PanelView: View {
             footer
         }
         .onChange(of: tab) { _, newValue in
-            if newValue == .coach { coach.loadIfNeeded() }
             if newValue == .perms { perms.loadIfNeeded(); steward.loadIfNeeded() }
-            if newValue == .projects { effort.loadIfNeeded() }
+            if newValue == .insights {
+                if insights == .habits { coach.loadIfNeeded() }
+                if insights == .projects { effort.loadIfNeeded() }
+            }
         }
     }
 
@@ -137,12 +136,12 @@ struct PanelView: View {
             switch tab {
             case .status:
                 Button(L("Refresh", lang)) { loader.refresh(includeTree: true) }
-            case .coach, .prompts:
-                Button(L("Rescan", lang)) { coach.reload() }
             case .perms:
                 Button(L("Rescan", lang)) { perms.reload() }
-            case .projects:
-                Button(L("Rescan", lang)) { effort.reload() }
+            case .insights:
+                Button(L("Rescan", lang)) {
+                    insights == .projects ? effort.reload() : coach.reload()
+                }
             case .settings:
                 Button(L("Open ~/.claude", lang)) { revealClaudeFolder() }
             }
