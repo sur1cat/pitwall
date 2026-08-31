@@ -35,6 +35,7 @@ Usage:
   pitwall statusline     one line for Claude Code's statusLine hook
   pitwall install        wire pitwall into Claude Code's settings
   pitwall hook EVENT     answer a Claude Code hook (used by the plugin)
+  pitwall doctor         what pitwall can and cannot read on this machine
   pitwall version        print the version
 
 Everything is read-only apart from pitwall's own cache, the salvage archives
@@ -74,6 +75,8 @@ func dispatch(args []string) error {
 		return cmdLint(args)
 	case "perms", "permissions":
 		return cmdPerms(args)
+	case "doctor":
+		return cmdDoctor(args)
 	case "quota":
 		return cmdQuota(args)
 	case "statusline":

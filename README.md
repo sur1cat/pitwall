@@ -127,12 +127,13 @@ make install          # into $GOBIN, or ~/go/bin
 
 ```sh
 pitwall version
-pitwall                # the glance screen
+pitwall doctor         # what pitwall can and cannot read here
 ```
 
-If the second command prints "No usage found", Claude Code has not written
-anything to `~/.claude/projects` yet, or `CLAUDE_CONFIG_DIR` points somewhere
-else — pitwall honours that variable.
+`doctor` walks the whole chain pitwall depends on — the config directory, the
+transcripts, the prompt history, the settings files, its own cache, git, the
+plan credential — and names the first link that is broken. An empty screen and
+a broken one look identical, and this is how to tell them apart.
 
 ## First run
 
@@ -223,8 +224,10 @@ cache and the quota history behind the pace measurement; nothing else changes.
 
 ## If something looks wrong
 
-**"No usage found"** — Claude Code has written nothing to `~/.claude/projects`,
-or `CLAUDE_CONFIG_DIR` points elsewhere.
+**An empty screen, or an analysis that finds nothing** — run `pitwall doctor`.
+It reports every file pitwall needs and which of them is missing. The usual
+answer is that Claude Code has written nothing to `~/.claude/projects` yet, or
+that `CLAUDE_CONFIG_DIR` points somewhere else.
 
 **Numbers cover less time than you expect** — Claude Code deletes transcripts
 after `cleanupPeriodDays`, 30 by default. `pitwall burn` says so once the
@@ -248,6 +251,7 @@ does.
 | `pitwall fleet` | Which agent is waiting, working, or done — and `wait` blocks until one needs you |
 | `pitwall burn` | What usage costs, by model, effort level, project, session and day |
 | `pitwall perms` | Which permission rules can never match, and `perms fix` removes them |
+| `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
 | `pitwall tree` | Which git worktrees your agents left behind, and which hold unsaved work |
 | `pitwall quota` | How much of your plan is left, from Anthropic, with a projection |
 | `pitwall coach` | Where your spend actually goes and what would change it |

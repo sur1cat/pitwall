@@ -6,6 +6,7 @@ struct PitwallBarApp: App {
     @StateObject private var coach = CoachLoader()
     @StateObject private var perms = PermsLoader()
     @StateObject private var cleaner = TreeCleaner()
+    @StateObject private var steward = StewardLoader()
     @StateObject private var effort = EffortLoader()
     @StateObject private var quota = QuotaLoader()
     @AppStorage("barStyle") private var styleRaw = BarStyle.full.rawValue
@@ -16,7 +17,7 @@ struct PitwallBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            PanelView(loader: loader, coach: coach, perms: perms, cleaner: cleaner, effort: effort, quota: quota,
+            PanelView(loader: loader, coach: coach, perms: perms, cleaner: cleaner, steward: steward, effort: effort, quota: quota,
                       selected: $styleRaw, notifications: $notifications,
                       language: $langRaw)
                 .frame(width: 470)
@@ -56,6 +57,7 @@ struct PanelView: View {
     @ObservedObject var coach: CoachLoader
     @ObservedObject var perms: PermsLoader
     @ObservedObject var cleaner: TreeCleaner
+    @ObservedObject var steward: StewardLoader
     @ObservedObject var effort: EffortLoader
     @ObservedObject var quota: QuotaLoader
     @Binding var selected: String
@@ -88,7 +90,7 @@ struct PanelView: View {
                     switch tab {
                     case .status:   StatusTab(loader: loader, quota: quota, cleaner: cleaner)
                     case .coach:    CoachTab(coach: coach)
-                    case .perms:    PermsTab(perms: perms)
+                    case .perms:    PermsTab(perms: perms, steward: steward)
                     case .projects: ProjectsTab(effort: effort)
                     case .prompts:  PromptsTab()
                     case .settings: SettingsTab(selected: $selected,
@@ -106,7 +108,7 @@ struct PanelView: View {
         }
         .onChange(of: tab) { _, newValue in
             if newValue == .coach { coach.loadIfNeeded() }
-            if newValue == .perms { perms.loadIfNeeded() }
+            if newValue == .perms { perms.loadIfNeeded(); steward.loadIfNeeded() }
             if newValue == .projects { effort.loadIfNeeded() }
         }
     }

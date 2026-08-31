@@ -45,6 +45,7 @@ private let ru: [String: String] = [
     "7 days": "7 дней",
     "Reading your settings files…": "Читаю файлы настроек…",
     "What is wrong": "Что не так",
+    "Enforcement": "Применение",
     "Files it would change": "Какие файлы изменит",
     "Clean up": "Очистить",
     "Re-check": "Проверить снова",

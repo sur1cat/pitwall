@@ -147,6 +147,7 @@ let removedCategories: Set<String> = ["secret", "fragment", "unmatchable", "shad
 
 struct PermsTab: View {
     @ObservedObject var perms: PermsLoader
+    @ObservedObject var steward: StewardLoader
     @State private var confirming = false
     @Environment(\.uiLanguage) private var lang
 
@@ -166,6 +167,7 @@ struct PermsTab: View {
                 categories(r)
                 if !r.plans.isEmpty { files(r) }
                 action(r)
+                StewardSection(steward: steward)
             }
             Spacer(minLength: 10)
         }

@@ -95,6 +95,13 @@ func cmdHUD(args []string) error {
 
 	fmt.Printf("%s  %s\n\n", ui.Bold("pitwall"), ui.Gray(now.Format("Mon 15:04")))
 
+	// An empty screen and a broken one look identical, which is the single
+	// most common way this tool confuses someone who has just installed it.
+	if len(records) == 0 && len(agents) == 0 {
+		fmt.Printf("  %s\n", ui.Yellow("nothing to show — pitwall found no Claude Code data on this machine"))
+		fmt.Printf("  %s\n\n", ui.Gray("run 'pitwall doctor' to see what it looked for and where"))
+	}
+
 	counts := map[fleet.State]int{}
 	for _, a := range agents {
 		counts[a.State]++
