@@ -6,6 +6,8 @@ struct Agent: Decodable, Identifiable, Equatable {
         case name, project, branch, state, idle, question, pid
         case sessionId = "session_id"
         case turnCost = "turn_cost"
+        case context
+        case contextTokens = "context_tokens"
         case lastText = "last_text"
         case pendingTool = "pending_tool"
     }
@@ -22,6 +24,11 @@ struct Agent: Decodable, Identifiable, Equatable {
     let question: String?
     let lastText: String?
     let pendingTool: String?
+    /// How full this session's context window is, 0 to 1. Optional because a
+    /// model pitwall does not know the window size of gets no reading at all,
+    /// and an invented bar would be acted on.
+    let context: Double?
+    let contextTokens: Int64?
 
     var needsYou: Bool { state == "WAITING" || state == "DONE" }
 
@@ -149,6 +156,13 @@ enum Format {
         if seconds < 3600 { return String(format: "%.0fm", seconds / 60) }
         if seconds < 86400 { return String(format: "%.0fh", seconds / 3600) }
         return String(format: "%.0fd", seconds / 86400)
+    }
+
+    /// tokens renders a token count the way a person reads one.
+    static func tokens(_ n: Int64) -> String {
+        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
+        if n >= 1_000 { return String(format: "%.0fK", Double(n) / 1_000) }
+        return "\(n)"
     }
 
     static func bytes(_ n: Int64) -> String {

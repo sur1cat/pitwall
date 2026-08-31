@@ -9,6 +9,16 @@ they leave behind, and which of my habits is burning the budget.
 `pitwall` answers all four from data already on your disk. One binary, no
 dependencies, nothing leaves the machine.
 
+Two things it shows that other tools do not:
+
+- **How full each agent's context window is.** This is the resource that runs
+  out first and least visibly. Money is recoverable and quota resets on a
+  schedule; a conversation forced into a compaction loses what it knew, and
+  nothing warns you before it happens.
+- **What your subagents cost.** They live in a `subagents/` directory that
+  usage trackers skip, and on the machine this was built on they are 23% of
+  the spend across nearly as many messages as the main conversation.
+
 ```
 $ pitwall
 
@@ -252,6 +262,13 @@ does.
 | `pitwall burn` | What usage costs, by model, effort level, project, session and day |
 | `pitwall perms` | Which permission rules can never match, and `perms fix` removes them |
 | `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
+
+The context reading is derived from each session's newest message — input plus
+both kinds of cache, which is what occupies the window — against the model's
+published size. A model whose window pitwall does not know gets no reading
+rather than a guessed one: a bar that is wrong is worse than one that is
+absent, because a wrong one gets acted on. In a status line the figure comes
+from Claude Code itself, which hands it over already computed.
 | `pitwall tree` | Which git worktrees your agents left behind, and which hold unsaved work |
 | `pitwall quota` | How much of your plan is left, from Anthropic, with a projection |
 | `pitwall coach` | Where your spend actually goes and what would change it |

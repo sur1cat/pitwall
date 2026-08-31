@@ -118,6 +118,13 @@ func cmdHUD(args []string) error {
 		}
 	}
 
+	// The context window is the resource that runs out first and least
+	// visibly. Money is recoverable and quota resets; a conversation that has
+	// to be compacted loses what it knew.
+	if line := contextLine(agents); line != "" {
+		fmt.Printf("  %s %s\n", ui.Gray("context"), line)
+	}
+
 	if quotaErr == nil || !quotaReading.FetchedAt.IsZero() {
 		fmt.Printf("  %s %s\n", ui.Gray("plan   "), quotaLine(quotaReading))
 	}
@@ -177,6 +184,25 @@ func agentSummary(counts map[fleet.State]int) string {
 // agree with it. Both lead with the rate that rests on more evidence: for the
 // weekly window that is its own elapsed time, which covers days, rather than
 // pitwall's readings, which may cover minutes.
+// contextLine names the agent whose window is fullest, because that is the one
+// about to lose what it knows to a compaction.
+func contextLine(agents []fleet.Agent) string {
+	var worst fleet.Agent
+	for _, a := range agents {
+		if a.Context > worst.Context {
+			worst = a
+		}
+	}
+	if worst.Context <= 0 {
+		return ""
+	}
+	line := fmt.Sprintf("%s %s", contextBar(worst), ui.Gray(worst.Name))
+	if worst.Context >= 0.85 {
+		line += "  " + ui.Red("compaction is close")
+	}
+	return line
+}
+
 func quotaLine(u quota.Usage) string {
 	part := func(name string, w quota.Window, p quota.Pace) string {
 		s := fmt.Sprintf("%s %.0f%%", name, w.Utilization)

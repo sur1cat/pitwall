@@ -74,7 +74,8 @@ func fleetRender(agents []fleet.Agent) string {
 
 	var t ui.Table
 	for _, a := range agents {
-		t.Row(fleetGlyph(a.State), fleetLabel(a.State), ui.Bold(a.Name), fleetWhere(a), fleetDetail(a), ui.Gray(ui.Duration(a.Idle)))
+		t.Row(fleetGlyph(a.State), fleetLabel(a.State), ui.Bold(a.Name), fleetWhere(a),
+			contextBar(a), fleetDetail(a), ui.Gray(ui.Duration(a.Idle)))
 	}
 	b.WriteString(t.Render("  "))
 	return b.String()
@@ -114,6 +115,26 @@ func fleetWhere(a fleet.Agent) string {
 		s += ui.Gray("@" + ui.Truncate(a.Branch, 24))
 	}
 	return s
+}
+
+// contextBar renders how full an agent's context window is. It is drawn only
+// when there is a real reading: an invented bar would be acted on.
+func contextBar(a fleet.Agent) string {
+	if a.Context <= 0 {
+		return ""
+	}
+	const width = 8
+	filled := int(a.Context*width + 0.5)
+	bar := strings.Repeat("=", filled) + strings.Repeat("·", width-filled)
+	label := fmt.Sprintf("[%s] %.0f%%", bar, a.Context*100)
+	switch {
+	case a.Context >= 0.85:
+		return ui.Red(label)
+	case a.Context >= 0.6:
+		return ui.Yellow(label)
+	default:
+		return ui.Gray(label)
+	}
 }
 
 func fleetDetail(a fleet.Agent) string {

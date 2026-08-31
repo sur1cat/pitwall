@@ -294,6 +294,44 @@ struct StatusTab: View {
     }
 }
 
+/// ContextBar shows how full a session's context window is. This is the
+/// resource that runs out first and least visibly: money is recoverable and
+/// quota resets on a schedule, but a conversation forced into a compaction
+/// loses what it knew, and nothing in Claude Code warns before that happens.
+struct ContextBar: View {
+    let fraction: Double
+    var tokens: Int64? = nil
+    @Environment(\.uiLanguage) private var lang
+
+    var body: some View {
+        HStack(spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.10))
+                    Capsule().fill(tint)
+                        .frame(width: max(geo.size.width * min(fraction, 1), 2))
+                }
+            }
+            .frame(height: 4)
+            Text("\(Int(fraction * 100))%")
+                .font(.system(size: 10)).monospacedDigit().foregroundStyle(tint)
+                .frame(width: 30, alignment: .trailing)
+        }
+        .help(helpText)
+    }
+
+    private var tint: Color {
+        fraction >= 0.85 ? .red : fraction >= 0.6 ? .orange : .secondary
+    }
+
+    private var helpText: String {
+        let n = tokens.map { Format.tokens($0) } ?? "—"
+        return lang == .ru
+            ? "\(n) в контекстном окне. За 85% начинается сжатие, и разговор теряет то, что знал."
+            : "\(n) in the context window. Past 85% a compaction is close, and the conversation loses what it knew."
+    }
+}
+
 /// AgentRow is clickable: it brings that agent's terminal tab to the front.
 struct AgentRow: View {
     let agent: Agent
@@ -323,6 +361,9 @@ struct AgentRow: View {
                         }
                         Text(agent.idleText)
                             .font(.system(size: 11)).foregroundStyle(.tertiary).monospacedDigit()
+                    }
+                    if let ctx = agent.context, ctx > 0 {
+                        ContextBar(fraction: ctx, tokens: agent.contextTokens)
                     }
                     if !agent.detail.isEmpty {
                         Text(agent.detail)

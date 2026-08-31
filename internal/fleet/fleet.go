@@ -58,6 +58,14 @@ type Agent struct {
 	LastText string    `json:"last_text,omitempty"`
 	Recap    string    `json:"recap,omitempty"`
 	RecapAt  time.Time `json:"recap_at,omitempty"`
+
+	// Context is how full the model's context window was at this session's
+	// newest message, from 0 to 1. It is the resource that runs out first and
+	// least visibly: money is recoverable, a compacted conversation is not.
+	// Zero means no reading — an unknown model, or nothing measured yet.
+	Context float64 `json:"context,omitempty"`
+	// ContextTokens is the occupancy behind that fraction.
+	ContextTokens int64 `json:"context_tokens,omitempty"`
 }
 
 // Options controls how much work a snapshot does.
@@ -99,6 +107,9 @@ func Snapshot(opt Options) []Agent {
 			CacheRead: tail.Turn.CacheRead,
 		}); ok {
 			a.TurnCost = c.Total()
+		}
+		if f, ok := tail.ContextFraction(); ok {
+			a.Context, a.ContextTokens = f, tail.Context
 		}
 
 		last := tail.LastActivity

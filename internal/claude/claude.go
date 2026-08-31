@@ -138,6 +138,15 @@ type Tail struct {
 	// Turn holds the tokens spent since the last thing you typed — the price
 	// of the exchange you are looking at.
 	Turn TurnUsage
+
+	// Context is how full the model's context window was at the newest
+	// assistant message: input plus both kinds of cache, which is what
+	// occupies the window. Output tokens are excluded, matching how Claude
+	// Code computes the figure it shows in a status line.
+	Context int64
+	// ContextModel is the model that message ran on, since the size of the
+	// window depends on it.
+	ContextModel string
 }
 
 // TurnUsage is one turn's token cost, left unpriced here so this package
@@ -276,6 +285,11 @@ func (t *Tail) absorb(e entry, pending, questions map[string]string) {
 			t.Turn.CacheWrite1h += w1
 			t.Turn.CacheRead += u.CacheRead
 			t.Turn.Messages++
+			// The newest message's own totals are the current occupancy, not
+			// the running sum: each message reports the whole window it saw.
+			if occ := u.Input + u.CacheRead + w5 + w1; occ > 0 {
+				t.Context, t.ContextModel = occ, e.Message.Model
+			}
 		}
 		for _, b := range e.Message.Content {
 			switch b.Type {

@@ -4,6 +4,7 @@ import SwiftUI
 /// click is the same for all of them; only the always-visible part changes.
 enum BarStyle: String, CaseIterable, Identifiable {
     case signal
+    case context
     case plan
     case spend
     case burn
@@ -17,6 +18,7 @@ enum BarStyle: String, CaseIterable, Identifiable {
     var rawTitle: String {
         switch self {
         case .signal: return "Signal"
+        case .context: return "Context left"
         case .plan:   return "Plan left"
         case .spend:  return "Spend"
         case .burn:   return "Burn rate"
@@ -30,6 +32,7 @@ enum BarStyle: String, CaseIterable, Identifiable {
     var rawBlurb: String {
         switch self {
         case .signal: return "One dot. Amber when an agent needs you."
+        case .context: return "How full the fullest context window is."
         case .plan:   return "How much of your plan is used, with a bar."
         case .spend:  return "Today's spend, and the last five hours."
         case .burn:   return "Dollars per hour, with a meter."
@@ -43,12 +46,15 @@ enum BarStyle: String, CaseIterable, Identifiable {
         agents: [
             Agent(name: "mds-0e", sessionId: "a", pid: 0, project: "mds", branch: "main",
                   state: "WAITING", idle: 2_460_000_000_000, turnCost: 3.10,
-                  question: "Drop the legacy index before backfill?", lastText: nil, pendingTool: nil),
+                  question: "Drop the legacy index before backfill?", lastText: nil, pendingTool: nil,
+                  context: 0.42, contextTokens: 420_000),
             Agent(name: "fleety-c8", sessionId: "b", pid: 0, project: "fleety", branch: "master",
                   state: "DONE", idle: 3_720_000_000_000, turnCost: 12.40, question: nil,
-                  lastText: "Shipped to prod, tests green", pendingTool: nil),
+                  lastText: "Shipped to prod, tests green", pendingTool: nil,
+                  context: 0.88, contextTokens: 880_000),
             Agent(name: "starts-0a", sessionId: "c", pid: 0, project: "starts", branch: nil,
-                  state: "WORKING", idle: 4_000_000_000, turnCost: 0.9, question: nil, lastText: nil, pendingTool: nil),
+                  state: "WORKING", idle: 4_000_000_000, turnCost: 0.9, question: nil, lastText: nil, pendingTool: nil,
+                  context: 0.16, contextTokens: 160_000),
         ],
         waiting: 2,
         today: Money(total: 264.89),
@@ -144,6 +150,11 @@ struct BarLabel: View {
             Image(systemName: signalGlyph)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(signalTint)
+        case .context:
+            HStack(spacing: 4) {
+                Meter(fraction: fullestContext, tint: contextTint, segments: 5)
+                Text(contextLabel).font(barFont).foregroundStyle(contextTint)
+            }
         case .plan:
             HStack(spacing: 4) {
                 Meter(fraction: planFraction, tint: planTint, segments: 4)
@@ -193,6 +204,20 @@ struct BarLabel: View {
     }
 
     private var barFont: Font { .system(size: 12, weight: .medium).monospacedDigit() }
+
+    /// fullestContext is the most-used context window across running agents —
+    /// the one that will be compacted first.
+    private var fullestContext: Double {
+        snapshot.agents.compactMap(\.context).max() ?? 0
+    }
+
+    private var contextLabel: String {
+        fullestContext > 0 ? "\(Int(fullestContext * 100))%" : "—"
+    }
+
+    private var contextTint: Color {
+        fullestContext >= 0.85 ? .red : fullestContext >= 0.6 ? .orange : .green
+    }
 
     private var planLine: String {
         guard let q = quota else { return "plan" }

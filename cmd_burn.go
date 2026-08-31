@@ -380,6 +380,12 @@ func burnStatusline(args []string) error {
 			DisplayName string `json:"display_name"`
 			ID          string `json:"id"`
 		} `json:"model"`
+		// Claude Code hands the status line the context figure already
+		// computed, which beats deriving it: it is the same number the
+		// session itself is working against.
+		ContextWindow struct {
+			UsedPercentage *float64 `json:"used_percentage"`
+		} `json:"context_window"`
 	}
 	_ = json.NewDecoder(os.Stdin).Decode(&ctx)
 
@@ -392,6 +398,12 @@ func burnStatusline(args []string) error {
 	parts := []string{}
 	if name := ctx.Model.DisplayName; name != "" {
 		parts = append(parts, name)
+	}
+	// The context window leads, because it is the constraint that bites first
+	// and the one a status line is uniquely placed to show: it changes within
+	// a single conversation, while spend and quota change over a day.
+	if p := ctx.ContextWindow.UsedPercentage; p != nil {
+		parts = append(parts, fmt.Sprintf("ctx %.0f%%", *p))
 	}
 	parts = append(parts,
 		money(today.Dollars())+" today",
