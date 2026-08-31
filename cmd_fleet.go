@@ -138,9 +138,37 @@ func fleetDetail(a fleet.Agent) string {
 	}
 }
 
+// oneLine flattens an assistant message into a single readable line. The raw
+// text is markdown and often ends in a fenced block of git output, which turned
+// a summary into "Committed and pushed. ``` 25b7f73 ← main = origin/main".
+// Headings, fences, bullets and emphasis are dropped rather than shown, because
+// a line truncated at 58 characters has no room to render them anyway.
 func oneLine(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	return strings.Join(strings.Fields(s), " ")
+	var kept []string
+	inFence := false
+	for _, raw := range strings.Split(s, "\n") {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~") {
+			inFence = !inFence
+			continue
+		}
+		if inFence || line == "" {
+			continue
+		}
+		line = strings.TrimLeft(line, "#")
+		for _, bullet := range []string{"- ", "* ", "> "} {
+			line = strings.TrimPrefix(strings.TrimSpace(line), bullet)
+		}
+		line = strings.ReplaceAll(line, "**", "")
+		line = strings.ReplaceAll(line, "`", "")
+		if line = strings.TrimSpace(line); line != "" {
+			kept = append(kept, line)
+		}
+	}
+	if len(kept) == 0 {
+		return strings.Join(strings.Fields(strings.ReplaceAll(s, "\n", " ")), " ")
+	}
+	return strings.Join(strings.Fields(strings.Join(kept, " · ")), " ")
 }
 
 func fleetWatch(args []string) error {

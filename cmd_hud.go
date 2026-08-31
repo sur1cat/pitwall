@@ -166,6 +166,10 @@ func agentSummary(counts map[fleet.State]int) string {
 
 // quotaLine renders both windows compactly, with a warning when the current
 // pace runs one of them out before it resets.
+// quotaLine is the glance version of what "pitwall quota" prints, and must
+// agree with it. Both lead with the rate that rests on more evidence: for the
+// weekly window that is its own elapsed time, which covers days, rather than
+// pitwall's readings, which may cover minutes.
 func quotaLine(u quota.Usage) string {
 	part := func(name string, w quota.Window, p quota.Pace) string {
 		s := fmt.Sprintf("%s %.0f%%", name, w.Utilization)
@@ -175,12 +179,22 @@ func quotaLine(u quota.Usage) string {
 		case w.Utilization >= 70:
 			s = ui.Yellow(s)
 		}
+		if !p.Trustworthy() {
+			return s
+		}
 		if d, ok := w.ExhaustedIn(p); ok {
-			s += ui.Red(" out in " + ui.Duration(d))
+			if d >= 6*time.Hour {
+				d = d.Round(time.Hour)
+			}
+			s += ui.Yellow(" full in " + ui.Duration(d))
 		}
 		return s
 	}
+	week := u.SevenDayPace
+	if avg, ok := u.SevenDay.Average(quota.WeekLength); ok {
+		week = avg
+	}
 	return part("5h", u.FiveHour, u.FiveHourPace) + "   " +
-		part("rolling", u.SevenDay, u.SevenDayPace) +
+		part("7d", u.SevenDay, week) +
 		ui.Gray("   resets in "+ui.Duration(u.FiveHour.Until()))
 }
