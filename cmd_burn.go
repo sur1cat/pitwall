@@ -186,8 +186,38 @@ func burnSummary(args []string) error {
 	if rep.Duplicates > 0 {
 		fmt.Printf("  %s\n", ui.Gray(fmt.Sprintf("%d replayed messages skipped (session forks and resumes)", rep.Duplicates)))
 	}
+	printCompactionNote()
 	printRetentionNote(claude.Retain())
 	return nil
+}
+
+// printCompactionNote reports what summarising the conversation has cost. It
+// is the most expensive thing that happens to a session and the least visible:
+// the tokens are re-read from scratch afterwards, the wait is dead time, and
+// what was dropped is gone with no way to ask what it was.
+func printCompactionNote() {
+	events := claude.Compactions()
+	if len(events) == 0 {
+		return
+	}
+	var dropped int64
+	var stall time.Duration
+	sessions := map[string]bool{}
+	worst := claude.Compaction{}
+	for _, e := range events {
+		dropped += e.Dropped
+		stall += e.Stall
+		sessions[e.Session] = true
+		if e.Dropped > worst.Dropped {
+			worst = e
+		}
+	}
+	fmt.Printf("  %s %d compactions across %d sessions dropped %s and waited %s\n",
+		ui.Yellow("context:"), len(events), len(sessions), tokens(dropped), ui.Duration(stall))
+	if worst.Dropped > 0 {
+		fmt.Printf("           %s\n", ui.Gray(fmt.Sprintf(
+			"the worst dropped %s in %s", tokens(worst.Dropped), worst.Project)))
+	}
 }
 
 // burnRate renders the current spend rate and, when a budget is set, a burnMeter.

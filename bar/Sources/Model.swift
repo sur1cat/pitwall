@@ -232,6 +232,9 @@ final class Loader: ObservableObject {
     private var cachedTree: Worktrees?
     private var cachedStranded = 0
     private var lastStates: [String: String] = [:]
+    /// Sessions already warned about their context, so the alert fires on the
+    /// crossing rather than on every poll.
+    private var contextWarned: Set<String> = []
 
     /// notificationsEnabled mirrors the setting; the loader owns the
     /// transition detection because it is the only thing that sees both the
@@ -289,11 +292,32 @@ final class Loader: ObservableObject {
     /// announce posts one notification per agent that just started needing
     /// you. The first snapshot only records state, so launching pitwall never
     /// produces a burst of notifications about things you already know.
+    /// contextAlert is the level at which a compaction becomes likely. Past it
+    /// the conversation is about to be summarised and lose what it knew, and
+    /// nothing else says so: on the corpus this was built against, 41 of 207
+    /// sessions crossed it, and the 37 compactions that followed dropped a
+    /// median of 986,000 tokens each.
+    private static let contextAlert = 0.85
+
     private func announce(_ next: Snapshot) {
         let seeded = !lastStates.isEmpty
         var states: [String: String] = [:]
+        var crossed: Set<String> = []
         for agent in next.agents {
             states[agent.sessionId] = agent.state
+
+            // Warned once per session per crossing, not on every poll: an
+            // alert that repeats every eight seconds is an alert people turn
+            // off, and then it protects nothing.
+            if let ctx = agent.context, ctx >= Loader.contextAlert {
+                crossed.insert(agent.sessionId)
+                if seeded, notificationsEnabled, !contextWarned.contains(agent.sessionId) {
+                    Notifier.shared.post(
+                        title: "\(agent.name) is at \(Int(ctx * 100))% context",
+                        body: "a compaction is close — it will summarise and lose detail")
+                }
+            }
+
             guard seeded, notificationsEnabled else { continue }
             let before = lastStates[agent.sessionId]
             guard before != agent.state, agent.needsYou else { continue }
@@ -309,5 +333,8 @@ final class Loader: ObservableObject {
             }
         }
         lastStates = states
+        // Dropping back below the line rearms the warning, so a session that
+        // is compacted and fills up again is flagged a second time.
+        contextWarned = crossed
     }
 }

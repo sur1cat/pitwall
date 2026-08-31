@@ -110,6 +110,14 @@ func Run(opt Options) (Result, error) {
 		return res, errNoGit
 	}
 
+	// Sizes are cached between runs and written back once at the end, because
+	// measuring them is what made this command slow enough to avoid.
+	sizes := loadSizeCache(filepath.Join(claude.Dir(), "pitwall"))
+	if opt.NoCache {
+		sizes = &sizeCache{path: sizes.path, entries: map[string]sizeEntry{}}
+	}
+	defer sizes.save()
+
 	res.Sessions = claude.Sessions()
 
 	var candidates []string
@@ -157,7 +165,7 @@ func Run(opt Options) (Result, error) {
 	sort.Strings(rootList)
 
 	for _, root := range rootList {
-		repo := inspect(root, opt)
+		repo := inspect(root, opt, sizes)
 		if repo != nil && len(repo.Worktrees) > 0 {
 			res.Repos = append(res.Repos, repo)
 		}
@@ -180,7 +188,7 @@ func (e gitError) Error() string { return string(e) }
 const errNoGit = gitError("git was not found on PATH")
 
 // inspect gathers git facts for one repository, in parallel across worktrees.
-func inspect(root string, opt Options) *Repo {
+func inspect(root string, opt Options, sizes *sizeCache) *Repo {
 	list, err := gitWorktrees(root)
 	if err != nil {
 		return nil
@@ -229,7 +237,7 @@ func inspect(root string, opt Options) *Repo {
 				wt.HasCounts = true
 			}
 			if opt.WithSize {
-				wt.SizeBytes = dirSize(wt.Path)
+				wt.SizeBytes = sizes.size(wt.Path)
 			}
 		}(wt)
 	}

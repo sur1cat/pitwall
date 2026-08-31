@@ -66,6 +66,18 @@ type Agent struct {
 	Context float64 `json:"context,omitempty"`
 	// ContextTokens is the occupancy behind that fraction.
 	ContextTokens int64 `json:"context_tokens,omitempty"`
+
+	// Stalled names the delegated runs that made a tool call and were never
+	// answered. Claude Code gives the parent no signal when a subagent blocks,
+	// so a delegation can hang for hours with the session looking busy.
+	Stalled []StalledSub `json:"stalled,omitempty"`
+}
+
+// StalledSub is one delegated run that appears stuck.
+type StalledSub struct {
+	ID      string        `json:"id"`
+	Waiting string        `json:"waiting"`
+	Quiet   time.Duration `json:"quiet"`
 }
 
 // Options controls how much work a snapshot does.
@@ -110,6 +122,13 @@ func Snapshot(opt Options) []Agent {
 		}
 		if f, ok := tail.ContextFraction(); ok {
 			a.Context, a.ContextTokens = f, tail.Context
+		}
+		for _, sub := range claude.Subagents(s.SessionID) {
+			if sub.Stalled(claude.StallThreshold) {
+				a.Stalled = append(a.Stalled, StalledSub{
+					ID: sub.ID, Waiting: sub.Pending[0], Quiet: sub.Quiet,
+				})
+			}
 		}
 
 		last := tail.LastActivity

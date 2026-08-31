@@ -117,6 +117,21 @@ func fleetWhere(a fleet.Agent) string {
 	return s
 }
 
+// stalledLine reports delegated runs that are waiting on an answer that is not
+// coming. Nothing else surfaces this: the parent session looks busy while a
+// subagent sits on a permission gate or an unresponsive server.
+func stalledLine(a fleet.Agent) string {
+	if len(a.Stalled) == 0 {
+		return ""
+	}
+	s := a.Stalled[0]
+	line := fmt.Sprintf("subagent stuck on %s for %s", s.Waiting, ui.Duration(s.Quiet))
+	if n := len(a.Stalled); n > 1 {
+		line += fmt.Sprintf(" (and %d more)", n-1)
+	}
+	return ui.Red(line)
+}
+
 // contextBar renders how full an agent's context window is. It is drawn only
 // when there is a real reading: an invented bar would be acted on.
 func contextBar(a fleet.Agent) string {
@@ -145,6 +160,9 @@ func fleetDetail(a fleet.Agent) string {
 		}
 		return ui.Yellow("blocked on " + a.Pending)
 	case fleet.StateWorking:
+		if line := stalledLine(a); line != "" {
+			return line
+		}
 		return ui.Gray("running")
 	case fleet.StateDone:
 		s := ui.Truncate(oneLine(a.LastText), 58)
