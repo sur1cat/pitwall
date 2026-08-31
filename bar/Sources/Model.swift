@@ -1,5 +1,17 @@
 import Foundation
 
+/// Sub is one delegated run in flight under an agent.
+struct Sub: Decodable, Equatable, Identifiable {
+    let id: String
+    let name: String
+    let task: String?
+    let `for`: Int64      // nanoseconds
+    let tools: Int
+    let cost: Double
+
+    var elapsed: String { Format.duration(seconds: Double(`for`) / 1_000_000_000) }
+}
+
 // Agent mirrors one entry of `pitwall --json`.
 struct Agent: Decodable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
@@ -8,6 +20,7 @@ struct Agent: Decodable, Identifiable, Equatable {
         case turnCost = "turn_cost"
         case context
         case contextTokens = "context_tokens"
+        case subs
         case lastText = "last_text"
         case pendingTool = "pending_tool"
     }
@@ -29,6 +42,10 @@ struct Agent: Decodable, Identifiable, Equatable {
     /// and an invented bar would be acted on.
     let context: Double?
     let contextTokens: Int64?
+    /// Delegated runs still going. The parent narrates what it handed off and
+    /// this row shows one busy session; underneath, several agents are working
+    /// and spending, and none of them is visible anywhere else.
+    let subs: [Sub]?
 
     var needsYou: Bool { state == "WAITING" || state == "DONE" }
 

@@ -293,6 +293,46 @@ struct StatusTab: View {
     }
 }
 
+/// SubagentList shows the delegated runs going on under an agent: what each was
+/// asked to do, how long it has been at it, and what it has spent. Nothing else
+/// surfaces this — the panel showed one busy line while several agents worked
+/// underneath, which on this machine is 23% of the spend.
+struct SubagentList: View {
+    let subs: [Sub]
+    @Environment(\.uiLanguage) private var lang
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 9)).foregroundStyle(.cyan)
+                Text(lang == .ru
+                     ? "\(subs.count) в работе · \(subs.reduce(0) { $0 + $1.tools }) вызовов · \(Format.money(subs.reduce(0) { $0 + $1.cost }))"
+                     : "\(subs.count) working · \(subs.reduce(0) { $0 + $1.tools }) tool calls · \(Format.money(subs.reduce(0) { $0 + $1.cost }))")
+                    .font(.system(size: 10)).foregroundStyle(.cyan)
+            }
+            ForEach(subs.prefix(4)) { sub in
+                HStack(alignment: .top, spacing: 5) {
+                    Text(sub.elapsed)
+                        .font(.system(size: 9)).monospacedDigit().foregroundStyle(.tertiary)
+                        .frame(width: 34, alignment: .trailing)
+                    Text(sub.task ?? sub.name)
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.tail)
+                    Spacer(minLength: 0)
+                    Text(Format.money(sub.cost))
+                        .font(.system(size: 9)).monospacedDigit().foregroundStyle(.tertiary)
+                }
+            }
+            if subs.count > 4 {
+                Text(lang == .ru ? "и ещё \(subs.count - 4)" : "and \(subs.count - 4) more")
+                    .font(.system(size: 9)).foregroundStyle(.tertiary).padding(.leading, 39)
+            }
+        }
+        .padding(.top, 1)
+    }
+}
+
 /// ContextBar shows how full a session's context window is. This is the
 /// resource that runs out first and least visibly: money is recoverable and
 /// quota resets on a schedule, but a conversation forced into a compaction
@@ -363,6 +403,9 @@ struct AgentRow: View {
                     }
                     if let ctx = agent.context, ctx > 0 {
                         ContextBar(fraction: ctx, tokens: agent.contextTokens)
+                    }
+                    if let subs = agent.subs, !subs.isEmpty {
+                        SubagentList(subs: subs)
                     }
                     if !agent.detail.isEmpty {
                         Text(agent.detail)

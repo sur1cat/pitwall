@@ -71,6 +71,30 @@ type Agent struct {
 	// answered. Claude Code gives the parent no signal when a subagent blocks,
 	// so a delegation can hang for hours with the session looking busy.
 	Stalled []StalledSub `json:"stalled,omitempty"`
+
+	// Subs are the delegated runs still going. The parent narrates what it
+	// handed off and the panel shows one busy session; underneath, several
+	// agents are working and none of them is visible.
+	Subs []Sub `json:"subs,omitempty"`
+}
+
+// shortSubID trims an agent identifier to something that fits a list and still
+// distinguishes one run from another.
+func shortSubID(id string) string {
+	if len(id) > 6 {
+		return id[:6]
+	}
+	return id
+}
+
+// Sub is one delegated run in flight.
+type Sub struct {
+	ID    string        `json:"id"`
+	Name  string        `json:"name"`
+	Task  string        `json:"task,omitempty"`
+	For   time.Duration `json:"for"`
+	Tools int           `json:"tools"`
+	Cost  float64       `json:"cost"`
 }
 
 // StalledSub is one delegated run that appears stuck.
@@ -129,6 +153,25 @@ func Snapshot(opt Options) []Agent {
 					ID: sub.ID, Waiting: sub.Pending[0], Quiet: sub.Quiet,
 				})
 			}
+			// A run that has written in the last two minutes is still going.
+			// Anything older has either finished or is reported as stalled.
+			if !sub.ActiveWithin(2 * time.Minute) {
+				continue
+			}
+			// The slug belongs to the session, not the run, so every
+			// delegation of one session carries the same one. A short form of
+			// the agent id tells them apart; the task says what each is for.
+			d := Sub{ID: sub.ID, Name: shortSubID(sub.ID), Task: sub.Task, Tools: sub.Tools}
+			if !sub.Started.IsZero() {
+				d.For = time.Since(sub.Started)
+			}
+			if c, ok := burn.Compute(sub.Usage.Model, time.Now(), burn.Usage{
+				Input: sub.Usage.Input, Output: sub.Usage.Output,
+				CacheWrite5m: sub.Usage.CacheWrite5m, CacheRead: sub.Usage.CacheRead,
+			}); ok {
+				d.Cost = c.Total()
+			}
+			a.Subs = append(a.Subs, d)
 		}
 
 		last := tail.LastActivity

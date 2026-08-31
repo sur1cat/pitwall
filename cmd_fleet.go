@@ -117,6 +117,23 @@ func fleetWhere(a fleet.Agent) string {
 	return s
 }
 
+// subLine reports the delegated runs still going. The parent narrates what it
+// handed off and the fleet shows one busy session; underneath, several agents
+// are working, spending money, and none of them is visible.
+func subLine(a fleet.Agent) string {
+	if len(a.Subs) == 0 {
+		return ""
+	}
+	var cost float64
+	var tools int
+	for _, s := range a.Subs {
+		cost += s.Cost
+		tools += s.Tools
+	}
+	return ui.Cyan(fmt.Sprintf("%d subagent(s) working", len(a.Subs))) +
+		ui.Gray(fmt.Sprintf(" · %d tool calls · %s", tools, money(cost)))
+}
+
 // stalledLine reports delegated runs that are waiting on an answer that is not
 // coming. Nothing else surfaces this: the parent session looks busy while a
 // subagent sits on a permission gate or an unresponsive server.
@@ -161,6 +178,9 @@ func fleetDetail(a fleet.Agent) string {
 		return ui.Yellow("blocked on " + a.Pending)
 	case fleet.StateWorking:
 		if line := stalledLine(a); line != "" {
+			return line
+		}
+		if line := subLine(a); line != "" {
 			return line
 		}
 		return ui.Gray("running")
