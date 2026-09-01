@@ -42,9 +42,9 @@ func TestDiskCountsAndAgesShellSnapshots(t *testing.T) {
 		t.Errorf("stale = %d over %d files, want 900 over 1", p.Stale, p.StaleFiles)
 	}
 
-	total, stale := TotalDisk(parts)
-	if total != 1000 || stale != 900 {
-		t.Errorf("totals = %d/%d, want 1000/900", total, stale)
+	total, staleBytes := TotalDisk(parts)
+	if total != 1000 || staleBytes != 900 {
+		t.Errorf("totals = %d/%d, want 1000/900", total, staleBytes)
 	}
 }
 
@@ -53,8 +53,8 @@ func TestDiskIgnoresWhatIsNotThere(t *testing.T) {
 	if parts := Disk(); len(parts) != 0 {
 		t.Errorf("an empty directory measures nothing, got %+v", parts)
 	}
-	total, stale := TotalDisk(nil)
-	if total != 0 || stale != 0 {
-		t.Errorf("nothing totals to nothing, got %d/%d", total, stale)
+	total, staleBytes := TotalDisk(nil)
+	if total != 0 || staleBytes != 0 {
+		t.Errorf("nothing totals to nothing, got %d/%d", total, staleBytes)
 	}
 }
