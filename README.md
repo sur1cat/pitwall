@@ -525,6 +525,15 @@ macOS asks once for permission to read it. Nothing is sent anywhere else, and
 no other command touches the network. Readings are cached for 180 seconds
 because that endpoint rate limits hard, with exponential backoff when it does.
 
+There is one record that outlives them. Claude Code keeps its own rolling
+summary in `stats-cache.json` — lifetime token totals per model, a daily
+series, and the date of your first session — and it is not pruned on the
+transcript schedule. On the machine this was built against it holds 52.1B
+tokens against the 33.4B still readable from transcripts, and `burn` reports an
+all-time figure from it, labelled as coming from there. The file is
+undocumented, so it is read defensively: an unfamiliar version or shape
+produces no reading rather than a wrong one.
+
 **Transcripts are pruned by Claude Code after about a month**, so `burn` and
 `coach` describe the retained window, not all time. Both print the range they
 measured, and both warn once the archive has actually reached the boundary and

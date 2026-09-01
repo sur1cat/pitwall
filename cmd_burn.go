@@ -190,11 +190,54 @@ func burnSummary(args []string) error {
 	if rep.Duplicates > 0 {
 		fmt.Printf("  %s\n", ui.Gray(fmt.Sprintf("%d replayed messages skipped (session forks and resumes)", rep.Duplicates)))
 	}
+	printLifetimeNote(records)
 	printCacheNote(records)
 	printStartupNote()
 	printCompactionNote()
 	printRetentionNote(claude.Retain())
 	return nil
+}
+
+// printLifetimeNote reports what Claude Code's own summary knows, which is
+// more than the transcripts do.
+//
+// Transcripts are deleted after cleanupPeriodDays and every number derived
+// from them goes with them; stats-cache.json keeps lifetime totals per model
+// and survives. Where the two disagree, both are right about different spans,
+// and saying which is which is the whole point of showing it.
+func printLifetimeNote(records []burn.Record) {
+	st, ok := claude.ReadStats()
+	if !ok {
+		return
+	}
+	var lifetime, priced float64
+	var lifeTokens int64
+	for model, m := range st.ByModel {
+		lifeTokens += m.Total()
+		if c, ok := burn.Compute(model, time.Now(), burn.Usage{
+			Input: m.Input, Output: m.Output,
+			CacheWrite5m: m.CacheCreate, CacheRead: m.CacheRead,
+		}); ok {
+			lifetime += c.Total()
+			priced++
+		}
+	}
+	if lifetime == 0 {
+		return
+	}
+	var seen int64
+	for _, r := range records {
+		seen += r.Usage.Total()
+	}
+	// Only worth saying when the longer record adds something.
+	if lifeTokens <= seen {
+		return
+	}
+	fmt.Printf("  %s %s over %.0f days and %d sessions, from Claude Code's own summary\n",
+		ui.Bold("all time:"), money(lifetime), st.Span().Hours()/24, st.TotalSessions)
+	fmt.Printf("           %s\n", ui.Gray(fmt.Sprintf(
+		"%s of tokens against %s still in transcripts — the rest was pruned",
+		tokens(lifeTokens), tokens(seen))))
 }
 
 // printCacheNote names a session that kept rebuilding its cache.

@@ -43,6 +43,7 @@ func cmdDoctor(args []string) error {
 		checkConfigDir(),
 		checkTranscripts(),
 		checkHistory(),
+		checkStats(),
 		checkSessions(),
 		checkSettings(),
 		checkCache(),
@@ -139,6 +140,20 @@ func checkHistory() check {
 	return check{"prompt history", "ok",
 		fmt.Sprintf("%s, last written %s ago", ui.Bytes(st.Size()),
 			ui.Duration(time.Since(st.ModTime()))), ""}
+}
+
+// checkStats reports on Claude Code's own usage summary, which outlives the
+// transcripts and is the only record of what was spent before they were
+// pruned.
+func checkStats() check {
+	st, ok := claude.ReadStats()
+	if !ok {
+		return check{"usage summary", "warn", "stats-cache.json is absent or in an unfamiliar shape",
+			"only the all-time figure needs it; everything else reads transcripts"}
+	}
+	return check{"usage summary", "ok",
+		fmt.Sprintf("%d sessions over %.0f days, outliving the transcripts",
+			st.TotalSessions, st.Span().Hours()/24), ""}
 }
 
 func checkSessions() check {
