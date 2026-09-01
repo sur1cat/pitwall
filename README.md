@@ -294,6 +294,15 @@ pitwall fleet wait && say "an agent needs you"
 pitwall fleet watch --exec 'terminal-notifier -message "$PITWALL_NAME: $PITWALL_STATE"'
 ```
 
+### doctor — what pitwall can read, and what Claude Code is keeping
+
+Alongside the chain of files pitwall depends on, `doctor` accounts for what
+Claude Code keeps in its own directory. That is 2.3 GB here and nothing else
+reports it: the worktree scan covers what agents leave in repositories and says
+nothing about this, though the two are the same size. Shell snapshots older
+than a week are named separately — each records one session's shell
+environment, so once that session is gone it reproduces nothing.
+
 ### drift — what changed under you
 
 Part of how Claude Code behaves is decided by switches the server turns on per

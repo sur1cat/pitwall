@@ -45,6 +45,7 @@ func cmdDoctor(args []string) error {
 		checkHistory(),
 		checkStats(),
 		checkGates(),
+		checkDisk(),
 		checkSessions(),
 		checkSettings(),
 		checkCache(),
@@ -174,6 +175,30 @@ func checkGates() check {
 	}
 	return check{"feature gates", "ok",
 		fmt.Sprintf("%d of %d on, %d skills counted", on, len(cfg.Gates), len(cfg.Skills)), ""}
+}
+
+// checkDisk reports what Claude Code keeps in its own directory, which nothing
+// else accounts for. The worktree scan covers what agents leave in
+// repositories and says nothing about this, and here the two are the same
+// order of magnitude.
+func checkDisk() check {
+	parts := claude.Disk()
+	if len(parts) == 0 {
+		return check{"disk", "ok", "nothing measurable yet", ""}
+	}
+	total, stale := claude.TotalDisk(parts)
+	detail := fmt.Sprintf("%s in %s, largest is %s at %s",
+		ui.Bytes(total), shortPath(claude.Dir()), parts[0].Name, ui.Bytes(parts[0].Bytes))
+	if stale == 0 {
+		return check{"disk", "ok", detail, ""}
+	}
+	for _, p := range parts {
+		if p.Stale > 0 {
+			return check{"disk", "warn", detail,
+				fmt.Sprintf("%s of it is %s — %s", ui.Bytes(stale), p.Name, p.Why)}
+		}
+	}
+	return check{"disk", "ok", detail, ""}
 }
 
 func checkSessions() check {
