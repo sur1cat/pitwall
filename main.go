@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -183,7 +184,12 @@ func treeDispatch(args []string) error {
 // hoistFlags moves flag arguments ahead of positional ones. Go's flag package
 // stops parsing at the first non-flag argument, so "primer PATH --write"
 // silently ignored --write. Anything after a bare "--" is left alone.
-func hoistFlags(args []string) []string {
+//
+// Which flags consume the next argument is asked of the FlagSet rather than
+// kept in a list. A hand-maintained list produced this same bug four separate
+// times across both tools: a value flag was added, the list was not updated,
+// and the flag was quietly separated from its argument.
+func hoistFlags(fs *flag.FlagSet, args []string) []string {
 	var flags, positional []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -193,9 +199,9 @@ func hoistFlags(args []string) []string {
 		}
 		if strings.HasPrefix(a, "-") && a != "-" {
 			flags = append(flags, a)
-			// A flag written as "--name value" takes the next argument with it.
-			if !strings.Contains(a, "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") &&
-				flagTakesValue(strings.TrimLeft(a, "-")) {
+			name := strings.TrimLeft(a, "-")
+			if !strings.Contains(a, "=") && i+1 < len(args) &&
+				!strings.HasPrefix(args[i+1], "-") && takesValue(fs, name) {
 				i++
 				flags = append(flags, args[i])
 			}
@@ -206,16 +212,15 @@ func hoistFlags(args []string) []string {
 	return append(flags, positional...)
 }
 
-// flagTakesValue lists the flags that consume the next argument. Boolean flags
-// must not, or they would swallow a path.
-func flagTakesValue(name string) bool {
-	switch name {
-	case "path", "p", "since", "project", "limit", "for", "timeout", "interval", "n",
-		"by", "format", "exec", "set", "clear", "floor", "threshold", "category",
-		"session", "out":
-		return true
+// takesValue reports whether a flag consumes the next argument. A boolean flag
+// does not, and would otherwise swallow whatever follows it.
+func takesValue(fs *flag.FlagSet, name string) bool {
+	f := fs.Lookup(name)
+	if f == nil {
+		return false
 	}
-	return false
+	b, ok := f.Value.(interface{ IsBoolFlag() bool })
+	return !(ok && b.IsBoolFlag())
 }
 
 // ---- helpers shared by every command ----

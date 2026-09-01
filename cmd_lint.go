@@ -29,7 +29,7 @@ func cmdLint(args []string) error {
 	fs.Usage = func() { fmt.Print(lintUsage) }
 	fs.BoolVar(&asJSON, "json", false, "machine-readable output")
 	fs.BoolVar(&rules, "rules", false, "list every rule")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 

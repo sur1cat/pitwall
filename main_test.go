@@ -1,25 +1,41 @@
 package main
 
-import "testing"
+import (
+	"flag"
+	"testing"
+)
 
-// Every flag a subcommand declares with a value must be listed in
-// flagTakesValue, or hoistFlags separates it from its argument and the command
-// silently reads the wrong thing. This walks the declared flag sets so a new
-// value flag cannot be added without being registered.
-func TestEveryValueFlagIsHoistable(t *testing.T) {
-	valueFlags := map[string][]string{
-		"burn":   {"since", "project", "limit"},
-		"coach":  {"since", "project"},
-		"perms":  {"category", "project", "n"},
-		"recall": {"out", "session", "project", "n"},
-		"tree":   {"path"},
-		"fleet":  {"n"},
-		"primer": {"path"},
+// The list this test used to guard is gone: hoistFlags now asks the FlagSet
+// which flags take a value, so a new one cannot be forgotten. What is worth
+// checking is that the asking works.
+func TestHoistFlagsAsksTheFlagSet(t *testing.T) {
+	fs := flag.NewFlagSet("t", flag.ContinueOnError)
+	var since, out string
+	var write bool
+	fs.StringVar(&since, "since", "", "")
+	fs.StringVar(&out, "out", "", "")
+	fs.BoolVar(&write, "write", false, "")
+
+	cases := []struct{ in, want []string }{
+		{[]string{"PATH", "--write"}, []string{"--write", "PATH"}},
+		{[]string{"--since", "30d", "PATH"}, []string{"--since", "30d", "PATH"}},
+		{[]string{"word", "--out", "f.md"}, []string{"--out", "f.md", "word"}},
+		// A boolean must not swallow what follows it.
+		{[]string{"--write", "PATH"}, []string{"--write", "PATH"}},
+		// An unknown flag is left alone rather than guessed at.
+		{[]string{"--unknown", "value"}, []string{"--unknown", "value"}},
+		{[]string{"--", "--literal"}, []string{"--", "--literal"}},
 	}
-	for cmd, names := range valueFlags {
-		for _, n := range names {
-			if !flagTakesValue(n) {
-				t.Errorf("%s declares --%s with a value, but flagTakesValue(%q) is false", cmd, n, n)
+	for _, c := range cases {
+		got := hoistFlags(fs, c.in)
+		if len(got) != len(c.want) {
+			t.Errorf("hoistFlags(%q) = %q, want %q", c.in, got, c.want)
+			continue
+		}
+		for i := range c.want {
+			if got[i] != c.want[i] {
+				t.Errorf("hoistFlags(%q) = %q, want %q", c.in, got, c.want)
+				break
 			}
 		}
 	}

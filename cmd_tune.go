@@ -35,7 +35,7 @@ func cmdTune(args []string) error {
 	fs.BoolVar(&asJSON, "json", false, "machine-readable output")
 	fs.BoolVar(&noColor, "no-color", false, "disable ANSI color")
 	fs.BoolVar(&write, "write", false, "apply these to ~/.claude/settings.json")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if noColor {

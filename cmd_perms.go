@@ -84,7 +84,7 @@ func permsFix(args []string) error {
 	fs.StringVar(&repoFilter, "project", "", "only settings files under this project")
 	fs.BoolVar(&noColor, "no-color", false, "disable ANSI color")
 	fs.BoolVar(&asJSON, "json", false, "machine-readable output")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if noColor {
@@ -289,7 +289,7 @@ func permsAudit(args []string) error {
 	fs.StringVar(&repoFilter, "project", "", "only rules from this project")
 	fs.IntVar(&limit, "n", 5, "examples to show per category")
 	fs.BoolVar(&debugPerms, "debug", false, "report what the scan looked at")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if noColor {

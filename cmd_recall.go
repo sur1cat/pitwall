@@ -35,7 +35,7 @@ func cmdRecall(args []string) error {
 	fs.IntVar(&limit, "n", 12, "how many events to list")
 	fs.BoolVar(&asJSON, "json", false, "machine-readable output")
 	fs.BoolVar(&noColor, "no-color", false, "disable ANSI color")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if noColor {

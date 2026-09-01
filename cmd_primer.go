@@ -20,7 +20,7 @@ func cmdPrimer(args []string) error {
 	fs.BoolVar(&force, "force", false, "overwrite an existing CLAUDE.md")
 	fs.BoolVar(&asJSON, "json", false, "machine-readable draft material")
 	fs.BoolVar(&all, "all", false, "every repository that has no primer, ranked by cost")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if all {

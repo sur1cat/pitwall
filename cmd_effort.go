@@ -52,7 +52,7 @@ func cmdEffort(args []string) error {
 	fs.Float64Var(&limit, "limit", envLimitValue(), "spend budget for the 5-hour window, in USD")
 	fs.Float64Var(&threshold, "threshold", 0.85, "fraction of the budget that triggers the guard")
 	fs.StringVar(&limitFloor, "floor", "medium", "level the guard drops to")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 

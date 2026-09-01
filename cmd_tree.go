@@ -481,7 +481,7 @@ func treePrep(args []string) error {
 	var dryRun bool
 	fs := treeFlags("prep", &g)
 	fs.BoolVar(&dryRun, "dry-run", false, "show what would be copied")
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	target := "."

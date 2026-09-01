@@ -24,7 +24,7 @@ Terminal.app and iTerm2; falls back to opening the agent's directory.
 func cmdFocus(args []string) error {
 	fs := flag.NewFlagSet("focus", flag.ContinueOnError)
 	fs.Usage = func() { fmt.Print(focusUsage) }
-	if err := fs.Parse(hoistFlags(args)); err != nil {
+	if err := fs.Parse(hoistFlags(fs, args)); err != nil {
 		return err
 	}
 	if fs.NArg() == 0 {
