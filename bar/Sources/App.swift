@@ -7,6 +7,7 @@ struct PitwallBarApp: App {
     @StateObject private var perms = PermsLoader()
     @StateObject private var cleaner = TreeCleaner()
     @StateObject private var steward = StewardLoader()
+    @StateObject private var health = HealthLoader()
     @StateObject private var effort = EffortLoader()
     @StateObject private var quota = QuotaLoader()
     @AppStorage("barStyle") private var styleRaw = BarStyle.full.rawValue
@@ -17,7 +18,7 @@ struct PitwallBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            PanelView(loader: loader, coach: coach, perms: perms, cleaner: cleaner, steward: steward, effort: effort, quota: quota,
+            PanelView(loader: loader, coach: coach, perms: perms, cleaner: cleaner, steward: steward, health: health, effort: effort, quota: quota,
                       selected: $styleRaw, notifications: $notifications,
                       language: $langRaw)
                 .frame(width: 470)
@@ -56,6 +57,7 @@ struct PanelView: View {
     @ObservedObject var perms: PermsLoader
     @ObservedObject var cleaner: TreeCleaner
     @ObservedObject var steward: StewardLoader
+    @ObservedObject var health: HealthLoader
     @ObservedObject var effort: EffortLoader
     @ObservedObject var quota: QuotaLoader
     @Binding var selected: String
@@ -90,7 +92,7 @@ struct PanelView: View {
                     case .status:   StatusTab(loader: loader, quota: quota, cleaner: cleaner)
                     case .perms:    PermsTab(perms: perms, steward: steward)
                     case .insights: InsightsTab(coach: coach, effort: effort, section: $insights)
-                    case .settings: SettingsTab(selected: $selected,
+                    case .settings: SettingsTab(health: health, selected: $selected,
                                                 notifications: $notifications,
                                                 language: $language,
                                                 snapshot: snap, loader: loader,
@@ -105,6 +107,7 @@ struct PanelView: View {
         }
         .onChange(of: tab) { _, newValue in
             if newValue == .perms { perms.loadIfNeeded(); steward.loadIfNeeded() }
+            if newValue == .settings { health.loadIfNeeded() }
             if newValue == .insights {
                 if insights == .habits { coach.loadIfNeeded() }
                 if insights == .projects { effort.loadIfNeeded() }
@@ -143,7 +146,7 @@ struct PanelView: View {
                     insights == .projects ? effort.reload() : coach.reload()
                 }
             case .settings:
-                Button(L("Open ~/.claude", lang)) { revealClaudeFolder() }
+                Button(L("Rescan", lang)) { health.reload() }
             }
             Spacer()
             Button(L("Quit", lang)) { NSApplication.shared.terminate(nil) }
@@ -596,6 +599,7 @@ struct LeakRow: View {
 // MARK: - Settings
 
 struct SettingsTab: View {
+    @ObservedObject var health: HealthLoader
     @Binding var selected: String
     @Binding var notifications: Bool
     @Binding var language: String
@@ -614,6 +618,7 @@ struct SettingsTab: View {
                 }
                 .padding(.top, 2)
             }
+            HealthSection(health: health)
             Block(title: "Language") {
                 Picker("", selection: $language) {
                     ForEach(Lang.allCases) { Text($0.title).tag($0.rawValue) }

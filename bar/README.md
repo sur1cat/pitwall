@@ -65,7 +65,11 @@ touched, working rules are left alone, and no permission is ever widened — a
 broken `allow` rule is reported rather than repaired, because repairing it
 would grant access that is not granted today.
 
-**Settings** — what the menu bar shows, and whether to notify.
+**Setup** — what the menu bar shows, whether to notify, the language, and the
+state of the setup itself: which server-side switches have moved under you
+since the last reading, which settings are worth changing with what each one
+costs and a button that applies them, and what pitwall can and cannot read on
+this machine.
 
 ## Notifications
 
