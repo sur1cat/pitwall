@@ -264,6 +264,7 @@ does.
 | `pitwall burn top --by branch` | What a feature cost, which no other tool answers |
 | `pitwall recall` | Bring back what a compaction threw away |
 | `pitwall tune` | Settings worth changing, from what your usage measures |
+| `pitwall drift` | Which server-side switches moved under you, and when |
 | `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
 
 The context reading is derived from each session's newest message — input plus
@@ -292,6 +293,31 @@ prompt. `pitwall fleet wait` turns that into a shell primitive:
 pitwall fleet wait && say "an agent needs you"
 pitwall fleet watch --exec 'terminal-notifier -message "$PITWALL_NAME: $PITWALL_STATE"'
 ```
+
+### drift — what changed under you
+
+Part of how Claude Code behaves is decided by switches the server turns on per
+account. When one moves, it is felt as the model getting better or worse for no
+visible reason: the April 2026 postmortem found effort had silently moved from
+high to medium for a month before anyone could prove it. The prevailing view is
+that this cannot be checked locally.
+
+It can. The switches are cached in `~/.claude.json` — here, 190 of 459 are on —
+so recording them turns a feeling into a diff:
+
+```
+$ pitwall drift
+190 of 459 server-side switches are on for your account
+
+since your last reading 43h ago
+  off  claude_code_skills_dashboard_enabled_cli
+  new  tengu_amber_flint
+```
+
+What a switch does is not knowable from here; most are codenames. This says
+that one moved and when, which is the part you cannot otherwise get. A reading
+is recorded only when something moved or a day has passed, so the history stays
+readable.
 
 ### tune — the knobs, and what turning them costs
 

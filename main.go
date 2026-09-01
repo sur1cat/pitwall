@@ -37,6 +37,7 @@ Usage:
   pitwall hook EVENT     answer a Claude Code hook (used by the plugin)
   pitwall recall         bring back what a compaction threw away          (recall --help)
   pitwall tune           settings worth changing, from your own usage
+  pitwall drift          which server-side switches moved under you
   pitwall doctor         what pitwall can and cannot read on this machine
   pitwall version        print the version
 
@@ -81,6 +82,8 @@ func dispatch(args []string) error {
 		return cmdDoctor(args)
 	case "tune":
 		return cmdTune(args)
+	case "drift":
+		return cmdDrift(args)
 	case "recall":
 		return cmdRecall(args)
 	case "quota":

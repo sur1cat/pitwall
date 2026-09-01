@@ -44,6 +44,7 @@ func cmdDoctor(args []string) error {
 		checkTranscripts(),
 		checkHistory(),
 		checkStats(),
+		checkGates(),
 		checkSessions(),
 		checkSettings(),
 		checkCache(),
@@ -154,6 +155,25 @@ func checkStats() check {
 	return check{"usage summary", "ok",
 		fmt.Sprintf("%d sessions over %.0f days, outliving the transcripts",
 			st.TotalSessions, st.Span().Hours()/24), ""}
+}
+
+// checkGates reports on the server-side switches, which decide part of how
+// Claude Code behaves and are the only local evidence that something changed
+// under you.
+func checkGates() check {
+	cfg, ok := claude.ReadConfig()
+	if !ok {
+		return check{"feature gates", "warn", "~/.claude.json is absent or in an unfamiliar shape",
+			"only pitwall drift needs it"}
+	}
+	on := 0
+	for _, v := range cfg.Gates {
+		if v {
+			on++
+		}
+	}
+	return check{"feature gates", "ok",
+		fmt.Sprintf("%d of %d on, %d skills counted", on, len(cfg.Gates), len(cfg.Skills)), ""}
 }
 
 func checkSessions() check {
