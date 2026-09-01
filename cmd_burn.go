@@ -190,10 +190,77 @@ func burnSummary(args []string) error {
 	if rep.Duplicates > 0 {
 		fmt.Printf("  %s\n", ui.Gray(fmt.Sprintf("%d replayed messages skipped (session forks and resumes)", rep.Duplicates)))
 	}
+	printCacheNote(records)
 	printStartupNote()
 	printCompactionNote()
 	printRetentionNote(claude.Retain())
 	return nil
+}
+
+// printCacheNote names a session that kept rebuilding its cache.
+//
+// Reading from cache costs a tenth of the input rate and writing costs between
+// 1.25 and 2 times it, so a high read share is the system working, not a
+// problem — the alarming-sounding "98% of tokens are cache reads" is good
+// news. What does cost money is rebuilding: a resume, a model switch or a
+// changed prompt prefix invalidates the cache and the whole conversation is
+// written again. This says nothing unless a session is well outside the norm,
+// which on a healthy corpus means it says nothing at all.
+func printCacheNote(records []burn.Record) {
+	type acc struct {
+		write, read int64
+		cost        float64
+		project     string
+	}
+	per := map[string]*acc{}
+	var totalWrite, totalRead int64
+	for _, r := range records {
+		w := r.Usage.CacheWrite5m + r.Usage.CacheWrite1h
+		totalWrite += w
+		totalRead += r.Usage.CacheRead
+		// A delegated run is short and builds its own cache from nothing, so
+		// its write share is legitimately high and says nothing about waste.
+		if r.Session == "" || r.Sub {
+			continue
+		}
+		a := per[r.Session]
+		if a == nil {
+			a = &acc{project: r.Project}
+			per[r.Session] = a
+		}
+		a.write += w
+		a.read += r.Usage.CacheRead
+		if c, ok := burn.Compute(r.Model, r.Hour, burn.Usage{
+			CacheWrite5m: r.Usage.CacheWrite5m, CacheWrite1h: r.Usage.CacheWrite1h,
+		}); ok {
+			a.cost += c.Total()
+		}
+	}
+	if totalWrite+totalRead == 0 {
+		return
+	}
+	norm := float64(totalWrite) / float64(totalWrite+totalRead)
+
+	var worst string
+	var worstAcc *acc
+	var worstShare float64
+	for id, a := range per {
+		if a.write+a.read < 10_000_000 || a.cost < 1 {
+			continue // too small to draw a conclusion from
+		}
+		share := float64(a.write) / float64(a.write+a.read)
+		if share > worstShare {
+			worst, worstAcc, worstShare = id, a, share
+		}
+	}
+	// Three times the corpus norm is the line: below it the variation is
+	// ordinary, above it something kept throwing the cache away.
+	if worstAcc == nil || worstShare < norm*3 {
+		return
+	}
+	fmt.Printf("  %s %s rewrote its cache %.0f%% of the time against a norm of %.0f%%, costing %s\n",
+		ui.Yellow("cache:"), worstAcc.project, worstShare*100, norm*100, money(worstAcc.cost))
+	fmt.Printf("         %s\n", ui.Gray("a resume, a model switch or a changed prompt prefix invalidates it — session "+worst[:8]))
 }
 
 // printStartupNote reports what a session costs before anyone types. The

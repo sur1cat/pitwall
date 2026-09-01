@@ -320,6 +320,15 @@ otherwise.
 threshold, it lowers the effort level new sessions start at, and restores it
 when the pressure drops.
 
+### quota — how much is actually left
+
+A plan stacks several limits and only one of them is on the dashboard. pitwall
+shows every window the API reports: the rolling five-hour one, the weekly one,
+and the per-model weekly windows where a plan has them — those run out on their
+own schedule, and hitting one is indistinguishable from hitting the overall
+limit unless both are on screen. Pay-as-you-go usage beyond the plan is shown
+too when it is switched on.
+
 ### burn — what it costs, priced properly
 
 Cache writes are not input tokens: a 5-minute-TTL write costs 1.25× the input

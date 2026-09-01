@@ -56,6 +56,27 @@ func cmdQuota(args []string) error {
 	avg, _ := usage.SevenDay.Average(quota.WeekLength)
 	t.Row("7 days", meterFor(usage.SevenDay), until(usage.SevenDay),
 		projection(usage.SevenDay, avg, usage.SevenDayPace))
+	// The plan stacks several limits and Anthropic's own dashboard shows one.
+	// A weekly allowance for a single model runs out on its own schedule, and
+	// hitting it is indistinguishable from hitting the overall one unless
+	// both are on screen.
+	for _, w := range []struct {
+		label string
+		win   *quota.Window
+	}{
+		{"7d opus", usage.SevenDayOpus},
+		{"7d sonnet", usage.SevenDaySonnet},
+	} {
+		if w.win == nil {
+			continue
+		}
+		a, _ := w.win.Average(quota.WeekLength)
+		t.Row(w.label, meterFor(*w.win), until(*w.win), projection(*w.win, a, quota.Pace{}))
+	}
+	if e := usage.ExtraUsage; e != nil && e.IsEnabled && e.Utilization != nil {
+		t.Row("extra", meterFor(quota.Window{Utilization: *e.Utilization}), "",
+			ui.Gray(extraNote(e.UsedCredits, e.MonthlyLimit)))
+	}
 	fmt.Print(t.Render("  "))
 
 	if avg.OK {
@@ -75,10 +96,26 @@ func cmdQuota(args []string) error {
 	if err != nil {
 		fmt.Printf("\n  %s %v\n", ui.Yellow("note:"), err)
 	}
+	if usage.SevenDayOpus == nil && usage.SevenDaySonnet == nil {
+		fmt.Printf("\n  %s\n", ui.Gray("this plan reports no per-model weekly windows; on plans that have them\n"+
+			"  they run out on their own schedule and are shown here too"))
+	}
+
 	fmt.Printf("\n%s\n", ui.Gray("the 5-hour window is rolling, so pitwall measures its pace from its own\n"+
 		"readings; the 7-day window is weekly and resets as a whole, so its rate is\n"+
 		"read from how much of it is gone and how long it has been open"))
 	return nil
+}
+
+// extraNote describes pay-as-you-go usage beyond the plan.
+func extraNote(used, limit *float64) string {
+	if used == nil {
+		return "extra usage is on"
+	}
+	if limit == nil {
+		return fmt.Sprintf("$%.2f of extra usage, no monthly cap set", *used)
+	}
+	return fmt.Sprintf("$%.2f of $%.2f monthly extra usage", *used, *limit)
 }
 
 func sourceNote(u quota.Usage) string {
