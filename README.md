@@ -263,6 +263,7 @@ does.
 | `pitwall perms` | Which permission rules can never match, and `perms fix` removes them |
 | `pitwall burn top --by branch` | What a feature cost, which no other tool answers |
 | `pitwall recall` | Bring back what a compaction threw away |
+| `pitwall tune` | Settings worth changing, from what your usage measures |
 | `pitwall doctor` | What pitwall can and cannot read here, and why a screen is empty |
 
 The context reading is derived from each session's newest message — input plus
@@ -291,6 +292,25 @@ prompt. `pitwall fleet wait` turns that into a shell primitive:
 pitwall fleet wait && say "an agent needs you"
 pitwall fleet watch --exec 'terminal-notifier -message "$PITWALL_NAME: $PITWALL_STATE"'
 ```
+
+### tune — the knobs, and what turning them costs
+
+Claude Code has settings for the two things people complain about most, and
+they sit in a reference nobody reads with numbers nobody has. `pitwall tune`
+supplies the numbers.
+
+- **`autoCompactWindow`** decides when a conversation is summarised. The
+  automatic trigger fires at the very edge of the window — here, at a median of
+  1,000,333 tokens with 1.7% spread — and the usual complaint is that it lands
+  when a task is nearly done. Lowering it means compaction happens sooner, more
+  often, loses less each time, and at a point you chose.
+- **`disableBundledSkills`, `autoMemoryEnabled`, `includeGitInstructions`** cut
+  what a session loads before you type. That is 34.1K tokens here, every time.
+- **`cleanupPeriodDays`** stops your transcripts being deleted.
+
+Every suggestion says what it trades away, because a setting that only saved
+money would already have been found. `--write` applies the ones you have not
+already set, after copying the file.
 
 ### quota — how much is actually left
 

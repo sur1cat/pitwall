@@ -88,7 +88,7 @@ func Gather(repo string) (Draft, error) {
 		repo = abs
 	}
 	d := Draft{Repo: repo, Name: filepath.Base(repo)}
-	root := filepath.Join(claude.Dir(), "projects")
+	root := claude.ProjectsDir()
 
 	cmds, files, dirs, branches := map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}
 	sessions := map[string]bool{}

@@ -158,7 +158,7 @@ func cachePath() string {
 
 // CollectWithProgress is Collect with a callback fired as files are read.
 func CollectWithProgress(progress Progress) ([]*Exchange, error) {
-	root := filepath.Join(claude.Dir(), "projects")
+	root := claude.ProjectsDir()
 	var files []string
 	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".jsonl") {

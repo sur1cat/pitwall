@@ -107,7 +107,7 @@ func pidAlive(pid int) bool {
 
 // TranscriptPath locates a session's .jsonl transcript.
 func TranscriptPath(sessionID string) string {
-	matches, err := filepath.Glob(filepath.Join(Dir(), "projects", "*", sessionID+".jsonl"))
+	matches, err := filepath.Glob(filepath.Join(ProjectsDir(), "*", sessionID+".jsonl"))
 	if err != nil || len(matches) == 0 {
 		return ""
 	}
@@ -347,4 +347,18 @@ func isHumanTurn(e entry) bool {
 		}
 	}
 	return true
+}
+
+// ProjectsDir is where transcripts live, with symlinks resolved.
+//
+// filepath.Walk lstats its root, so a symlinked projects directory looks like
+// a file and is never descended into — pitwall would read nothing and say
+// nothing was there. People do move this directory and link it back, so the
+// link is followed once here rather than in every walker.
+func ProjectsDir() string {
+	p := filepath.Join(Dir(), "projects")
+	if resolved, err := filepath.EvalSymlinks(p); err == nil {
+		return resolved
+	}
+	return p
 }

@@ -36,6 +36,7 @@ Usage:
   pitwall install        wire pitwall into Claude Code's settings
   pitwall hook EVENT     answer a Claude Code hook (used by the plugin)
   pitwall recall         bring back what a compaction threw away          (recall --help)
+  pitwall tune           settings worth changing, from your own usage
   pitwall doctor         what pitwall can and cannot read on this machine
   pitwall version        print the version
 
@@ -78,6 +79,8 @@ func dispatch(args []string) error {
 		return cmdPerms(args)
 	case "doctor":
 		return cmdDoctor(args)
+	case "tune":
+		return cmdTune(args)
 	case "recall":
 		return cmdRecall(args)
 	case "quota":

@@ -35,7 +35,7 @@ type Compaction struct {
 
 // Compactions reads every compaction recorded in the retained transcripts.
 func Compactions() []Compaction {
-	root := filepath.Join(Dir(), "projects")
+	root := ProjectsDir()
 	var out []Compaction
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".jsonl") {

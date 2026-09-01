@@ -29,7 +29,7 @@ type Startup struct {
 // It stops at the first assistant message of each transcript, so the whole
 // sweep touches only the head of each file.
 func Startups() []Startup {
-	root := filepath.Join(Dir(), "projects")
+	root := ProjectsDir()
 	var out []Startup
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".jsonl") {

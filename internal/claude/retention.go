@@ -47,7 +47,7 @@ func (r Retention) Trimming() bool {
 func Retain() Retention {
 	var out Retention
 	out.Limit = cleanupPeriodDays(&out.Set)
-	root := filepath.Join(Dir(), "projects")
+	root := ProjectsDir()
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Ext(path) != ".jsonl" {
 			return nil

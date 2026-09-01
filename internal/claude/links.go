@@ -66,7 +66,7 @@ type cacheEntry struct {
 // transcript file, so repeat runs only read files that changed.
 func BuildIndex(useCache bool) Index {
 	idx := Index{Links: map[string]Link{}}
-	root := filepath.Join(Dir(), "projects")
+	root := ProjectsDir()
 	files := transcripts(root)
 	if len(files) == 0 {
 		return idx
@@ -243,7 +243,7 @@ func extractCWD(line []byte) string {
 // from a path separator — so the cwd recorded inside each file is the only
 // dependable source.
 func Workdirs() []string {
-	root := filepath.Join(Dir(), "projects")
+	root := ProjectsDir()
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil

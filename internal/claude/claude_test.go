@@ -79,8 +79,16 @@ func TestReadTailPicksUpRecapAndTurnDuration(t *testing.T) {
 
 func TestTranscriptPathAndMissingFile(t *testing.T) {
 	path := writeTranscript(t, "sess-4", `{"type":"assistant","message":{"role":"assistant","content":[]}}`)
-	if got := TranscriptPath("sess-4"); got != path {
-		t.Errorf("TranscriptPath = %q, want %q", got, path)
+	// Paths come back with symlinks resolved, because a symlinked projects
+	// directory is otherwise never descended into. On macOS a temp directory
+	// is itself behind /var -> /private/var, so the expectation has to be
+	// resolved too rather than compared literally.
+	want, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		want = path
+	}
+	if got := TranscriptPath("sess-4"); got != want {
+		t.Errorf("TranscriptPath = %q, want %q", got, want)
 	}
 	if got := TranscriptPath("nope"); got != "" {
 		t.Errorf("TranscriptPath for unknown session = %q, want empty", got)

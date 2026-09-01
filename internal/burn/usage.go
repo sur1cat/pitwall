@@ -118,7 +118,7 @@ var (
 // across transcripts.
 func Scan(useCache bool) Report {
 	var rep Report
-	files := transcripts(filepath.Join(claude.Dir(), "projects"))
+	files := transcripts(claude.ProjectsDir())
 	if len(files) == 0 {
 		return rep
 	}
